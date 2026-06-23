@@ -1,5 +1,5 @@
 from django import forms
-from .models import Klient, Material, RozmiarBlachy, TypUslugi, Zamowienie
+from .models import Klient, Material, RozmiarBlachy, TypUslugi, Zamowienie, PozycjaZamowienia
 
 
 class KlientForm(forms.ModelForm):
@@ -174,3 +174,49 @@ class ZamowienieForm(forms.ModelForm):
                 "placeholder": "Dodatkowe informacje do zamówienia..."
             }),
         }
+        
+class PozycjaZamowieniaForm(forms.ModelForm):
+    class Meta:
+        model = PozycjaZamowienia
+        fields = [
+            "material",
+            "rozmiar",
+            "typ_uslugi",
+            "przypisany_pracownik",
+            "ilosc",
+            "cena",
+            "status",
+            "czy_powstal_odpad",
+            "opis_odpadu",
+        ]
+
+        labels = {
+            "material": "Materiał",
+            "rozmiar": "Rozmiar blachy",
+            "typ_uslugi": "Typ usługi",
+            "przypisany_pracownik": "Przypisany pracownik",
+            "ilosc": "Ilość",
+            "cena": "Cena",
+            "status": "Status",
+            "czy_powstal_odpad": "Czy powstał odpad?",
+            "opis_odpadu": "Opis odpadu",
+        }
+
+        widgets = {
+            "opis_odpadu": forms.Textarea(attrs={
+                "rows": 3,
+                "placeholder": "Opcjonalny opis odpadu..."
+            }),
+        }
+
+    def clean_ilosc(self):
+        ilosc = self.cleaned_data["ilosc"]
+        if ilosc <= 0:
+            raise forms.ValidationError("Ilość musi być większa od zera.")
+        return ilosc
+
+    def clean_cena(self):
+        cena = self.cleaned_data["cena"]
+        if cena < 0:
+            raise forms.ValidationError("Cena nie może być ujemna.")
+        return cena

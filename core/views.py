@@ -8,9 +8,17 @@ from .forms import (
     RozmiarBlachyForm,
     TypUslugiForm,
     ZamowienieForm,
+    PozycjaZamowieniaForm,
 )
 
-from .models import Klient, Material, RozmiarBlachy, TypUslugi, Zamowienie
+from .models import (
+    Klient,
+    Material,
+    RozmiarBlachy,
+    TypUslugi,
+    Zamowienie,
+    PozycjaZamowienia,
+)
 
 
 @login_required
@@ -477,6 +485,105 @@ def zamowienie_usun(request, zamowienie_id):
         request,
         "zamowienia/usun.html",
         {
+            "zamowienie": zamowienie,
+        },
+    )
+@login_required
+def zamowienie_szczegoly(request, zamowienie_id):
+    zamowienie = get_object_or_404(
+        Zamowienie.objects.select_related("klient"),
+        id=zamowienie_id,
+    )
+
+    pozycje = zamowienie.pozycje.select_related(
+        "material",
+        "rozmiar",
+        "typ_uslugi",
+        "przypisany_pracownik",
+    ).all()
+
+    suma = sum(p.cena * p.ilosc for p in pozycje)
+
+    return render(
+        request,
+        "zamowienia/szczegoly.html",
+        {
+            "zamowienie": zamowienie,
+            "pozycje": pozycje,
+            "suma": suma,
+        },
+    )
+
+
+@login_required
+def pozycja_dodaj(request, zamowienie_id):
+    zamowienie = get_object_or_404(Zamowienie, id=zamowienie_id)
+
+    if request.method == "POST":
+        form = PozycjaZamowieniaForm(request.POST)
+
+        if form.is_valid():
+            pozycja = form.save(commit=False)
+            pozycja.zamowienie = zamowienie
+            pozycja.save()
+
+            messages.success(request, "Pozycja zamówienia została dodana.")
+            return redirect("core:zamowienie_szczegoly", zamowienie_id=zamowienie.id)
+    else:
+        form = PozycjaZamowieniaForm()
+
+    return render(
+        request,
+        "pozycje_zamowienia/formularz.html",
+        {
+            "form": form,
+            "tytul": "Dodaj pozycję zamówienia",
+            "zamowienie": zamowienie,
+        },
+    )
+
+
+@login_required
+def pozycja_edytuj(request, pozycja_id):
+    pozycja = get_object_or_404(PozycjaZamowienia, id=pozycja_id)
+    zamowienie = pozycja.zamowienie
+
+    if request.method == "POST":
+        form = PozycjaZamowieniaForm(request.POST, instance=pozycja)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Pozycja zamówienia została zaktualizowana.")
+            return redirect("core:zamowienie_szczegoly", zamowienie_id=zamowienie.id)
+    else:
+        form = PozycjaZamowieniaForm(instance=pozycja)
+
+    return render(
+        request,
+        "pozycje_zamowienia/formularz.html",
+        {
+            "form": form,
+            "tytul": "Edytuj pozycję zamówienia",
+            "zamowienie": zamowienie,
+        },
+    )
+
+
+@login_required
+def pozycja_usun(request, pozycja_id):
+    pozycja = get_object_or_404(PozycjaZamowienia, id=pozycja_id)
+    zamowienie = pozycja.zamowienie
+
+    if request.method == "POST":
+        pozycja.delete()
+        messages.success(request, "Pozycja zamówienia została usunięta.")
+        return redirect("core:zamowienie_szczegoly", zamowienie_id=zamowienie.id)
+
+    return render(
+        request,
+        "pozycje_zamowienia/usun.html",
+        {
+            "pozycja": pozycja,
             "zamowienie": zamowienie,
         },
     )

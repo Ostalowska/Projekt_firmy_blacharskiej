@@ -61,4 +61,10 @@ urlpatterns = [
     path("zamowienia/dodaj/", views.zamowienie_dodaj, name="zamowienie_dodaj"),
     path("zamowienia/<int:zamowienie_id>/edytuj/", views.zamowienie_edytuj, name="zamowienie_edytuj"),
     path("zamowienia/<int:zamowienie_id>/usun/", views.zamowienie_usun, name="zamowienie_usun"),
+    
+    path("zamowienia/<int:zamowienie_id>/", views.zamowienie_szczegoly, name="zamowienie_szczegoly"),
+
+    path("zamowienia/<int:zamowienie_id>/pozycje/dodaj/", views.pozycja_dodaj, name="pozycja_dodaj"),
+    path("pozycje/<int:pozycja_id>/edytuj/", views.pozycja_edytuj, name="pozycja_edytuj"),
+    path("pozycje/<int:pozycja_id>/usun/", views.pozycja_usun, name="pozycja_usun"),
 ]

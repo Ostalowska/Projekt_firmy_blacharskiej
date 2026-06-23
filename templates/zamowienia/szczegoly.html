@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+    .page-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    h1, h2 { text-align: center; color: #2c3e50; }
+    .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    .btn { padding: 9px 14px; background: #2c3e50; color: white; text-decoration: none; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; display: inline-block; }
+    .btn:hover { background: #1f2a38; }
+    .btn-danger { background: #c0392b; }
+    .btn-danger:hover { background: #922b21; }
+    .btn-secondary { background: #7f8c8d; }
+    .messages { margin-bottom: 15px; }
+    .message { background: #d4edda; color: #155724; padding: 12px; border-radius: 6px; text-align: center; font-weight: bold; }
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    thead { background: #2c3e50; color: white; }
+    th, td { padding: 12px 15px; border-bottom: 1px solid #eee; text-align: left; }
+    tbody tr:nth-child(even) { background: #f8f9fa; }
+    tbody tr:hover { background: #eef2f7; }
+    .actions { display: flex; gap: 8px; }
+    .summary { font-size: 18px; font-weight: bold; text-align: right; margin-top: 15px; color: #2c3e50; }
+</style>
+
+<div class="page-container">
+
+    <h1>Szczegóły zamówienia #{{ zamowienie.id }}</h1>
+
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="message">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="card">
+        <p><strong>Klient:</strong> {{ zamowienie.klient.imie }} {{ zamowienie.klient.nazwisko }}</p>
+        <p><strong>Email:</strong> {{ zamowienie.klient.email }}</p>
+        <p><strong>Status:</strong> {{ zamowienie.get_status_display }}</p>
+        <p><strong>Data utworzenia:</strong> {{ zamowienie.data_utworzenia|date:"d.m.Y H:i" }}</p>
+        <p><strong>Uwagi:</strong> {{ zamowienie.uwagi|default:"-" }}</p>
+
+        <a class="btn btn-secondary" href="{% url 'core:zamowienia_lista' %}">
+            Powrót do listy
+        </a>
+
+        <a class="btn" href="{% url 'core:pozycja_dodaj' zamowienie.id %}">
+            Dodaj pozycję
+        </a>
+    </div>
+
+    <h2>Pozycje zamówienia</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Materiał</th>
+                <th>Rozmiar</th>
+                <th>Usługa</th>
+                <th>Pracownik</th>
+                <th>Ilość</th>
+                <th>Cena</th>
+                <th>Wartość</th>
+                <th>Status</th>
+                <th>Odpad</th>
+                <th>Akcje</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for pozycja in pozycje %}
+                <tr>
+                    <td>#{{ pozycja.id }}</td>
+                    <td>{{ pozycja.material.nazwa }} {{ pozycja.material.grubosc_mm }} mm</td>
+                    <td>{{ pozycja.rozmiar.nazwa }}</td>
+                    <td>{{ pozycja.typ_uslugi|default:"-" }}</td>
+                    <td>
+                        {% if pozycja.przypisany_pracownik %}
+                            {{ pozycja.przypisany_pracownik.first_name }} {{ pozycja.przypisany_pracownik.last_name }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>{{ pozycja.ilosc }}</td>
+                    <td>{{ pozycja.cena }} zł</td>
+                    <td>{{ pozycja.cena|floatformat:2 }} × {{ pozycja.ilosc }}</td>
+                    <td>{{ pozycja.get_status_display }}</td>
+                    <td>
+                        {% if pozycja.czy_powstal_odpad %}
+                            Tak
+                        {% else %}
+                            Nie
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="actions">
+                            <a class="btn" href="{% url 'core:pozycja_edytuj' pozycja.id %}">
+                                Edytuj
+                            </a>
+
+                            <a class="btn btn-danger" href="{% url 'core:pozycja_usun' pozycja.id %}">
+                                Usuń
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="11" style="text-align:center;">
+                        Brak pozycji w tym zamówieniu.
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="summary">
+        Suma zamówienia: {{ suma }} zł
+    </div>
+
+</div>
+
+{% endblock %}
