@@ -26,4 +26,27 @@ urlpatterns = [
         auth_views.LogoutView.as_view(),
         name="logout",
     ),
+    path(
+    "materialy/",
+    views.materialy_lista,
+    name="materialy_lista",
+    ),
+
+    path(
+        "materialy/dodaj/",
+        views.material_dodaj,
+        name="material_dodaj",
+    ),
+
+    path(
+        "materialy/<int:material_id>/edytuj/",
+        views.material_edytuj,
+        name="material_edytuj",
+    ),
+
+    path(
+        "materialy/<int:material_id>/usun/",
+        views.material_usun,
+        name="material_usun",
+    ),
 ]

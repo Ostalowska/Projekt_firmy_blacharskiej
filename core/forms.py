@@ -1,5 +1,7 @@
 from django import forms
 from .models import Klient
+from .models import Material
+
 
 
 class KlientForm(forms.ModelForm):
@@ -54,3 +56,40 @@ class KlientForm(forms.ModelForm):
         if telefon and len(telefon) != 9:
             raise forms.ValidationError("Telefon powinien mieć 9 cyfr.")
         return telefon
+        
+class MaterialForm(forms.ModelForm):
+    class Meta:
+        model = Material
+        fields = [
+            "nazwa",
+            "grubosc_mm",
+            "producent",
+            "cena_za_m2",
+        ]
+
+        labels = {
+            "nazwa": "Nazwa materiału",
+            "grubosc_mm": "Grubość (mm)",
+            "producent": "Producent",
+            "cena_za_m2": "Cena za m²",
+        }
+
+    def clean_grubosc_mm(self):
+        grubosc = self.cleaned_data["grubosc_mm"]
+
+        if grubosc <= 0:
+            raise forms.ValidationError(
+                "Grubość musi być większa od zera."
+            )
+
+        return grubosc
+
+    def clean_cena_za_m2(self):
+        cena = self.cleaned_data["cena_za_m2"]
+
+        if cena < 0:
+            raise forms.ValidationError(
+                "Cena nie może być ujemna."
+            )
+
+        return cena

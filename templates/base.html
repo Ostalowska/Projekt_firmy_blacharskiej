@@ -100,12 +100,12 @@
 
             {% if czy_admin %}
                 <a href="{% url 'core:klienci_lista' %}">Klienci</a>
-                <a href="#">Pracownicy</a>
-                <a href="#">Materiały</a>
-                <a href="#">Magazyn</a>
-                <a href="#">Zamówienia</a>
-                <a href="#">Moje prace</a>
-                <a href="#">Płatności</a>
+				<a href="#">Pracownicy</a>
+				<a href="{% url 'core:materialy_lista' %}">Materiały</a>
+				<a href="#">Magazyn</a>
+				<a href="#">Zamówienia</a>
+				<a href="#">Moje prace</a>
+				<a href="#">Płatności</a>
             {% endif %}
 
             {% if czy_magazynier %}

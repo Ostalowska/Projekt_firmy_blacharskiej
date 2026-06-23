@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+    .page-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 40px 20px;
+    }
+
+    .card {
+        background: white;
+        padding: 25px;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+
+    h1 {
+        color: #c0392b;
+    }
+
+    .btn-row {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin-top: 20px;
+    }
+
+    .btn {
+        padding: 10px 15px;
+        background: #2c3e50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .btn-danger {
+        background: #c0392b;
+    }
+
+    .btn-secondary {
+        background: #7f8c8d;
+    }
+</style>
+
+<div class="page-container">
+
+    <div class="card">
+        <h1>Usuń materiał</h1>
+
+        <p>
+            Czy na pewno chcesz usunąć materiał:
+            <strong>{{ material.nazwa }}</strong>?
+        </p>
+
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="btn-row">
+                <button type="submit" class="btn btn-danger">
+                    Tak, usuń
+                </button>
+
+                <a href="{% url 'core:klienci_lista' %}" class="btn btn-secondary">
+                    Anuluj
+                </a>
+            </div>
+        </form>
+    </div>
+
+</div>
+
+{% endblock %}
