@@ -2,8 +2,15 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 
-from .forms import KlientForm, MaterialForm, RozmiarBlachyForm, TypUslugiForm
-from .models import Klient, Material, RozmiarBlachy, TypUslugi
+from .forms import (
+    KlientForm,
+    MaterialForm,
+    RozmiarBlachyForm,
+    TypUslugiForm,
+    ZamowienieForm,
+)
+
+from .models import Klient, Material, RozmiarBlachy, TypUslugi, Zamowienie
 
 
 @login_required
@@ -375,5 +382,101 @@ def typ_uslugi_usun(request, typ_id):
         "typy_uslug/usun.html",
         {
             "typ_uslugi": typ_uslugi,
+        },
+    )
+
+@login_required
+def zamowienia_lista(request):
+    query = request.GET.get("q", "")
+    status = request.GET.get("status", "")
+
+    zamowienia = Zamowienie.objects.select_related("klient").all().order_by("-data_utworzenia")
+
+    if query:
+        zamowienia = zamowienia.filter(
+            klient__imie__icontains=query
+        ) | zamowienia.filter(
+            klient__nazwisko__icontains=query
+        ) | zamowienia.filter(
+            klient__email__icontains=query
+        ) | zamowienia.filter(
+            klient__nazwa_firmy__icontains=query
+        )
+
+    if status:
+        zamowienia = zamowienia.filter(status=status)
+
+    return render(
+        request,
+        "zamowienia/lista.html",
+        {
+            "zamowienia": zamowienia,
+            "query": query,
+            "status": status,
+            "statusy": Zamowienie.STATUS_CHOICES,
+        },
+    )
+
+
+@login_required
+def zamowienie_dodaj(request):
+    if request.method == "POST":
+        form = ZamowienieForm(request.POST)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Zamówienie zostało utworzone.")
+            return redirect("core:zamowienia_lista")
+    else:
+        form = ZamowienieForm()
+
+    return render(
+        request,
+        "zamowienia/formularz.html",
+        {
+            "form": form,
+            "tytul": "Dodaj zamówienie",
+        },
+    )
+
+
+@login_required
+def zamowienie_edytuj(request, zamowienie_id):
+    zamowienie = get_object_or_404(Zamowienie, id=zamowienie_id)
+
+    if request.method == "POST":
+        form = ZamowienieForm(request.POST, instance=zamowienie)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Zamówienie zostało zaktualizowane.")
+            return redirect("core:zamowienia_lista")
+    else:
+        form = ZamowienieForm(instance=zamowienie)
+
+    return render(
+        request,
+        "zamowienia/formularz.html",
+        {
+            "form": form,
+            "tytul": "Edytuj zamówienie",
+        },
+    )
+
+
+@login_required
+def zamowienie_usun(request, zamowienie_id):
+    zamowienie = get_object_or_404(Zamowienie, id=zamowienie_id)
+
+    if request.method == "POST":
+        zamowienie.delete()
+        messages.success(request, "Zamówienie zostało usunięte.")
+        return redirect("core:zamowienia_lista")
+
+    return render(
+        request,
+        "zamowienia/usun.html",
+        {
+            "zamowienie": zamowienie,
         },
     )

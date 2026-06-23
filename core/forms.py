@@ -1,5 +1,5 @@
 from django import forms
-from .models import Klient, Material, RozmiarBlachy, TypUslugi
+from .models import Klient, Material, RozmiarBlachy, TypUslugi, Zamowienie
 
 
 class KlientForm(forms.ModelForm):
@@ -152,3 +152,25 @@ class TypUslugiForm(forms.ModelForm):
             raise forms.ValidationError("Nazwa usługi musi mieć minimum 3 znaki.")
 
         return nazwa
+        
+class ZamowienieForm(forms.ModelForm):
+    class Meta:
+        model = Zamowienie
+        fields = [
+            "klient",
+            "status",
+            "uwagi",
+        ]
+
+        labels = {
+            "klient": "Klient",
+            "status": "Status",
+            "uwagi": "Uwagi",
+        }
+
+        widgets = {
+            "uwagi": forms.Textarea(attrs={
+                "rows": 4,
+                "placeholder": "Dodatkowe informacje do zamówienia..."
+            }),
+        }

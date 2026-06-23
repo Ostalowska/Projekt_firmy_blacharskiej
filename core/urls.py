@@ -57,4 +57,8 @@ urlpatterns = [
     path("typy-uslug/dodaj/", views.typ_uslugi_dodaj, name="typ_uslugi_dodaj"),
     path("typy-uslug/<int:typ_id>/edytuj/", views.typ_uslugi_edytuj, name="typ_uslugi_edytuj"),
     path("typy-uslug/<int:typ_id>/usun/", views.typ_uslugi_usun, name="typ_uslugi_usun"),
+    path("zamowienia/", views.zamowienia_lista, name="zamowienia_lista"),
+    path("zamowienia/dodaj/", views.zamowienie_dodaj, name="zamowienie_dodaj"),
+    path("zamowienia/<int:zamowienie_id>/edytuj/", views.zamowienie_edytuj, name="zamowienie_edytuj"),
+    path("zamowienia/<int:zamowienie_id>/usun/", views.zamowienie_usun, name="zamowienie_usun"),
 ]
