@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Firma Blacharska</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 240px;
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+        }
+
+        .sidebar h2 {
+            margin-top: 0;
+            font-size: 20px;
+        }
+
+        .sidebar a {
+            display: block;
+            color: white;
+            text-decoration: none;
+            padding: 8px 0;
+            margin: 5px 0;
+        }
+
+        .sidebar a:hover {
+            background-color: #34495e;
+            padding-left: 10px;
+            transition: 0.2s;
+        }
+
+        .content {
+            flex: 1;
+            padding: 20px;
+            background-color: #ecf0f1;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="sidebar">
+        <h2>Firma Blacharska</h2>
+
+        <a href="{% url 'core:index' %}">Strona główna</a>
+        <a href="#">Klienci</a>
+        <a href="#">Pracownicy</a>
+        <a href="#">Materiały</a>
+        <a href="#">Magazyn</a>
+        <a href="#">Zamówienia</a>
+        <a href="#">Moje prace</a>
+        <a href="#">Płatności</a>
+    </div>
+
+    <div class="content">
+        {% block content %}{% endblock %}
+    </div>
+</div>
+
+</body>
+</html>

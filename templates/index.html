@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+    .page-container {
+        max-width: 850px;
+        margin: 0 auto;
+        padding: 40px 20px;
+        text-align: center;
+        color: #333;
+    }
+
+    h1 {
+        color: #2c3e50;
+        margin-bottom: 20px;
+    }
+
+    p {
+        font-size: 16px;
+        line-height: 1.5;
+        color: #555;
+    }
+
+    ul {
+        display: inline-block;
+        text-align: left;
+        margin: 20px 0;
+        padding-left: 20px;
+        font-size: 16px;
+    }
+
+    li {
+        margin-bottom: 8px;
+    }
+
+    .highlight {
+        margin-top: 30px;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+</style>
+
+<div class="page-container">
+
+    <h1>System zarządzania Firmą Blacharską</h1>
+
+    <p>
+        Aplikacja umożliwia obsługę zamówień, materiałów, pracowników,
+        magazynu, usług produkcyjnych oraz płatności w firmie zajmującej się
+        obróbką blacharską.
+    </p>
+
+    <p>Dostępne moduły systemu:</p>
+
+    <ul>
+        <li>zarządzanie klientami</li>
+        <li>dodawanie pracowników i ról</li>
+        <li>obsługa materiałów blacharskich</li>
+        <li>tworzenie i realizacja zamówień</li>
+        <li>przypisywanie prac do pracowników</li>
+        <li>kontrola magazynu</li>
+        <li>obsługa płatności</li>
+    </ul>
+
+    <p class="highlight">
+        Wybierz moduł z menu po lewej stronie.
+    </p>
+
+</div>
+
+{% endblock %}
