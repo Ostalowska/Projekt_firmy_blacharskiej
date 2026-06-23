@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Firma Blacharska</title>
+
     <style>
         body {
             margin: 0;
@@ -40,6 +41,14 @@
             transition: 0.2s;
         }
 
+        .user-box {
+            font-size: 13px;
+            background: #34495e;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
         .content {
             flex: 1;
             padding: 20px;
@@ -54,14 +63,36 @@
     <div class="sidebar">
         <h2>Firma Blacharska</h2>
 
-        <a href="{% url 'core:index' %}">Strona główna</a>
-        <a href="#">Klienci</a>
-        <a href="#">Pracownicy</a>
-        <a href="#">Materiały</a>
-        <a href="#">Magazyn</a>
-        <a href="#">Zamówienia</a>
-        <a href="#">Moje prace</a>
-        <a href="#">Płatności</a>
+        {% if request.user.is_authenticated %}
+            <div class="user-box">
+                Zalogowano jako:<br>
+                <strong>{{ request.user.username }}</strong>
+            </div>
+
+            <a href="{% url 'core:index' %}">Strona główna</a>
+            <a href="#">Klienci</a>
+            <a href="#">Pracownicy</a>
+            <a href="#">Materiały</a>
+            <a href="#">Magazyn</a>
+            <a href="#">Zamówienia</a>
+            <a href="#">Moje prace</a>
+            <a href="#">Płatności</a>
+            <form method="post" action="{% url 'core:logout' %}" style="margin: 0;">
+    {% csrf_token %}
+    <button type="submit" style="
+        width: 100%;
+        background: none;
+        border: none;
+        color: white;
+        text-align: left;
+        padding: 8px 0;
+        cursor: pointer;
+        font-size: 16px;
+    ">
+        Wyloguj
+    </button>
+</form>
+        {% endif %}
     </div>
 
     <div class="content">
