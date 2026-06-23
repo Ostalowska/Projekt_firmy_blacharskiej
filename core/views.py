@@ -2,8 +2,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 
-from .forms import KlientForm, MaterialForm, RozmiarBlachyForm
-from .models import Klient, Material, RozmiarBlachy
+from .forms import KlientForm, MaterialForm, RozmiarBlachyForm, TypUslugiForm
+from .models import Klient, Material, RozmiarBlachy, TypUslugi
 
 
 @login_required
@@ -294,5 +294,86 @@ def rozmiar_usun(request, rozmiar_id):
         "rozmiary/usun.html",
         {
             "rozmiar": rozmiar,
+        },
+    )
+@login_required
+def typy_uslug_lista(request):
+    query = request.GET.get("q", "")
+
+    typy_uslug = TypUslugi.objects.all().order_by("nazwa")
+
+    if query:
+        typy_uslug = typy_uslug.filter(nazwa__icontains=query)
+
+    return render(
+        request,
+        "typy_uslug/lista.html",
+        {
+            "typy_uslug": typy_uslug,
+            "query": query,
+        },
+    )
+
+
+@login_required
+def typ_uslugi_dodaj(request):
+    if request.method == "POST":
+        form = TypUslugiForm(request.POST)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Typ usługi został dodany.")
+            return redirect("core:typy_uslug_lista")
+    else:
+        form = TypUslugiForm()
+
+    return render(
+        request,
+        "typy_uslug/formularz.html",
+        {
+            "form": form,
+            "tytul": "Dodaj typ usługi",
+        },
+    )
+
+
+@login_required
+def typ_uslugi_edytuj(request, typ_id):
+    typ_uslugi = get_object_or_404(TypUslugi, id=typ_id)
+
+    if request.method == "POST":
+        form = TypUslugiForm(request.POST, instance=typ_uslugi)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Typ usługi został zaktualizowany.")
+            return redirect("core:typy_uslug_lista")
+    else:
+        form = TypUslugiForm(instance=typ_uslugi)
+
+    return render(
+        request,
+        "typy_uslug/formularz.html",
+        {
+            "form": form,
+            "tytul": "Edytuj typ usługi",
+        },
+    )
+
+
+@login_required
+def typ_uslugi_usun(request, typ_id):
+    typ_uslugi = get_object_or_404(TypUslugi, id=typ_id)
+
+    if request.method == "POST":
+        typ_uslugi.delete()
+        messages.success(request, "Typ usługi został usunięty.")
+        return redirect("core:typy_uslug_lista")
+
+    return render(
+        request,
+        "typy_uslug/usun.html",
+        {
+            "typ_uslugi": typ_uslugi,
         },
     )

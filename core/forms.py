@@ -1,5 +1,5 @@
 from django import forms
-from .models import Klient, Material, RozmiarBlachy
+from .models import Klient, Material, RozmiarBlachy, TypUslugi
 
 
 class KlientForm(forms.ModelForm):
@@ -126,3 +126,29 @@ class RozmiarBlachyForm(forms.ModelForm):
             raise forms.ValidationError("Wysokość musi być większa od zera.")
 
         return wysokosc
+
+class TypUslugiForm(forms.ModelForm):
+    class Meta:
+        model = TypUslugi
+        fields = [
+            "nazwa",
+            "jednostka",
+        ]
+
+        labels = {
+            "nazwa": "Nazwa usługi",
+            "jednostka": "Jednostka",
+        }
+
+        widgets = {
+            "nazwa": forms.TextInput(attrs={"placeholder": "Np. Cięcie"}),
+            "jednostka": forms.TextInput(attrs={"placeholder": "Np. szt., m², mb"}),
+        }
+
+    def clean_nazwa(self):
+        nazwa = self.cleaned_data["nazwa"]
+
+        if len(nazwa) < 3:
+            raise forms.ValidationError("Nazwa usługi musi mieć minimum 3 znaki.")
+
+        return nazwa
