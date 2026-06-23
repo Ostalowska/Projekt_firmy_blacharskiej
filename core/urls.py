@@ -49,4 +49,8 @@ urlpatterns = [
         views.material_usun,
         name="material_usun",
     ),
+    path("rozmiary/", views.rozmiary_lista, name="rozmiary_lista"),
+    path("rozmiary/dodaj/", views.rozmiar_dodaj, name="rozmiar_dodaj"),
+    path("rozmiary/<int:rozmiar_id>/edytuj/", views.rozmiar_edytuj, name="rozmiar_edytuj"),
+    path("rozmiary/<int:rozmiar_id>/usun/", views.rozmiar_usun, name="rozmiar_usun"),
 ]

@@ -2,8 +2,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 
-from .forms import KlientForm, MaterialForm
-from .models import Klient, Material
+from .forms import KlientForm, MaterialForm, RozmiarBlachyForm
+from .models import Klient, Material, RozmiarBlachy
 
 
 @login_required
@@ -214,5 +214,85 @@ def material_usun(request, material_id):
         "materialy/usun.html",
         {
             "material": material,
+        },
+    )
+@login_required
+def rozmiary_lista(request):
+    query = request.GET.get("q", "")
+
+    rozmiary = RozmiarBlachy.objects.all().order_by("nazwa")
+
+    if query:
+        rozmiary = rozmiary.filter(nazwa__icontains=query)
+
+    return render(
+        request,
+        "rozmiary/lista.html",
+        {
+            "rozmiary": rozmiary,
+            "query": query,
+        },
+    )
+
+
+@login_required
+def rozmiar_dodaj(request):
+    if request.method == "POST":
+        form = RozmiarBlachyForm(request.POST)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Rozmiar blachy został dodany.")
+            return redirect("core:rozmiary_lista")
+    else:
+        form = RozmiarBlachyForm()
+
+    return render(
+        request,
+        "rozmiary/formularz.html",
+        {
+            "form": form,
+            "tytul": "Dodaj rozmiar blachy",
+        },
+    )
+
+
+@login_required
+def rozmiar_edytuj(request, rozmiar_id):
+    rozmiar = get_object_or_404(RozmiarBlachy, id=rozmiar_id)
+
+    if request.method == "POST":
+        form = RozmiarBlachyForm(request.POST, instance=rozmiar)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Rozmiar blachy został zaktualizowany.")
+            return redirect("core:rozmiary_lista")
+    else:
+        form = RozmiarBlachyForm(instance=rozmiar)
+
+    return render(
+        request,
+        "rozmiary/formularz.html",
+        {
+            "form": form,
+            "tytul": "Edytuj rozmiar blachy",
+        },
+    )
+
+@login_required
+def rozmiar_usun(request, rozmiar_id):
+    rozmiar = get_object_or_404(RozmiarBlachy, id=rozmiar_id)
+
+    if request.method == "POST":
+        rozmiar.delete()
+        messages.success(request, "Rozmiar blachy został usunięty.")
+        return redirect("core:rozmiary_lista")
+
+    return render(
+        request,
+        "rozmiary/usun.html",
+        {
+            "rozmiar": rozmiar,
         },
     )

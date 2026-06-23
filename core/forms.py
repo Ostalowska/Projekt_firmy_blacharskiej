@@ -1,7 +1,5 @@
 from django import forms
-from .models import Klient
-from .models import Material
-
+from .models import Klient, Material, RozmiarBlachy
 
 
 class KlientForm(forms.ModelForm):
@@ -93,3 +91,38 @@ class MaterialForm(forms.ModelForm):
             )
 
         return cena
+
+class RozmiarBlachyForm(forms.ModelForm):
+    class Meta:
+        model = RozmiarBlachy
+        fields = [
+            "nazwa",
+            "szerokosc_mm",
+            "wysokosc_mm",
+            "standardowy",
+        ]
+
+        labels = {
+            "nazwa": "Nazwa rozmiaru",
+            "szerokosc_mm": "Szerokość (mm)",
+            "wysokosc_mm": "Wysokość (mm)",
+            "standardowy": "Rozmiar standardowy",
+        }
+
+    def clean_szerokosc_mm(self):
+        szerokosc = self.cleaned_data["szerokosc_mm"]
+        standardowy = self.cleaned_data.get("standardowy")
+
+        if standardowy and szerokosc <= 0:
+            raise forms.ValidationError("Szerokość musi być większa od zera.")
+
+        return szerokosc
+
+    def clean_wysokosc_mm(self):
+        wysokosc = self.cleaned_data["wysokosc_mm"]
+        standardowy = self.cleaned_data.get("standardowy")
+
+        if standardowy and wysokosc <= 0:
+            raise forms.ValidationError("Wysokość musi być większa od zera.")
+
+        return wysokosc
