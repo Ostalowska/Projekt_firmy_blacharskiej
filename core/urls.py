@@ -8,6 +8,11 @@ app_name = "core"
 urlpatterns = [
     path("", views.index, name="index"),
 
+    path("klienci/", views.klienci_lista, name="klienci_lista"),
+    path("klienci/dodaj/", views.klient_dodaj, name="klient_dodaj"),
+    path("klienci/<int:klient_id>/edytuj/", views.klient_edytuj, name="klient_edytuj"),
+    path("klienci/<int:klient_id>/usun/", views.klient_usun, name="klient_usun"),
+
     path(
         "login/",
         auth_views.LoginView.as_view(
