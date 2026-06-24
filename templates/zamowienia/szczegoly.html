@@ -9,7 +9,7 @@
     .btn { padding: 9px 14px; background: #2c3e50; color: white; text-decoration: none; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; display: inline-block; }
     .btn:hover { background: #1f2a38; }
     .btn-danger { background: #c0392b; }
-    .btn-danger:hover { background: #922b21; }
+    .btn-success { background: #166534; }
     .btn-secondary { background: #7f8c8d; }
     .messages { margin-bottom: 15px; }
     .message { background: #d4edda; color: #155724; padding: 12px; border-radius: 6px; text-align: center; font-weight: bold; }
@@ -17,14 +17,15 @@
     thead { background: #2c3e50; color: white; }
     th, td { padding: 12px 15px; border-bottom: 1px solid #eee; text-align: left; }
     tbody tr:nth-child(even) { background: #f8f9fa; }
-    tbody tr:hover { background: #eef2f7; }
-    .actions { display: flex; gap: 8px; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .summary { font-size: 18px; font-weight: bold; text-align: right; margin-top: 15px; color: #2c3e50; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    input, select { padding: 10px; border-radius: 6px; border: 1px solid #ccc; width: 100%; box-sizing: border-box; }
 </style>
 
 <div class="page-container">
 
-    <h1>Szczegóły zamówienia #{{ zamowienie.id }}</h1>
+    <h1>Szczegóły zamówienia {{ zamowienie.numer|default:zamowienie.id }}</h1>
 
     {% if messages %}
         <div class="messages">
@@ -37,16 +38,13 @@
     <div class="card">
         <p><strong>Klient:</strong> {{ zamowienie.klient.imie }} {{ zamowienie.klient.nazwisko }}</p>
         <p><strong>Email:</strong> {{ zamowienie.klient.email }}</p>
+        <p><strong>Firma:</strong> {{ zamowienie.klient.nazwa_firmy|default:"-" }}</p>
         <p><strong>Status:</strong> {{ zamowienie.get_status_display }}</p>
         <p><strong>Data utworzenia:</strong> {{ zamowienie.data_utworzenia|date:"d.m.Y H:i" }}</p>
         <p><strong>Uwagi:</strong> {{ zamowienie.uwagi|default:"-" }}</p>
 
         <a class="btn btn-secondary" href="{% url 'core:zamowienia_lista' %}">
             Powrót do listy
-        </a>
-
-        <a class="btn" href="{% url 'core:pozycja_dodaj' zamowienie.id %}">
-            Dodaj pozycję
         </a>
     </div>
 
@@ -55,60 +53,37 @@
     <table>
         <thead>
             <tr>
-                <th>ID</th>
                 <th>Materiał</th>
                 <th>Rozmiar</th>
                 <th>Usługa</th>
-                <th>Pracownik</th>
                 <th>Ilość</th>
-                <th>Cena</th>
+                <th>Cena jedn.</th>
                 <th>Wartość</th>
-                <th>Status</th>
-                <th>Odpad</th>
-                <th>Akcje</th>
             </tr>
         </thead>
 
         <tbody>
             {% for pozycja in pozycje %}
                 <tr>
-                    <td>#{{ pozycja.id }}</td>
                     <td>{{ pozycja.material.nazwa }} {{ pozycja.material.grubosc_mm }} mm</td>
-                    <td>{{ pozycja.rozmiar.nazwa }}</td>
-                    <td>{{ pozycja.typ_uslugi|default:"-" }}</td>
                     <td>
-                        {% if pozycja.przypisany_pracownik %}
-                            {{ pozycja.przypisany_pracownik.first_name }} {{ pozycja.przypisany_pracownik.last_name }}
+                        {% if pozycja.czy_niestandardowy %}
+                            {{ pozycja.szerokosc_niestandardowa_mm }} x {{ pozycja.wysokosc_niestandardowa_mm }} mm
+                            <br><small>niestandardowy</small>
+                        {% elif pozycja.rozmiar %}
+                            {{ pozycja.rozmiar.szerokosc_mm }} x {{ pozycja.rozmiar.wysokosc_mm }} mm
                         {% else %}
                             -
                         {% endif %}
                     </td>
+                    <td>{{ pozycja.typ_uslugi|default:"-" }}</td>
                     <td>{{ pozycja.ilosc }}</td>
-                    <td>{{ pozycja.cena }} zł</td>
-                    <td>{{ pozycja.cena|floatformat:2 }} × {{ pozycja.ilosc }}</td>
-                    <td>{{ pozycja.get_status_display }}</td>
-                    <td>
-                        {% if pozycja.czy_powstal_odpad %}
-                            Tak
-                        {% else %}
-                            Nie
-                        {% endif %}
-                    </td>
-                    <td>
-                        <div class="actions">
-                            <a class="btn" href="{% url 'core:pozycja_edytuj' pozycja.id %}">
-                                Edytuj
-                            </a>
-
-                            <a class="btn btn-danger" href="{% url 'core:pozycja_usun' pozycja.id %}">
-                                Usuń
-                            </a>
-                        </div>
-                    </td>
+                    <td>{{ pozycja.cena_jednostkowa }} zł</td>
+                    <td>{{ pozycja.wartosc }} zł</td>
                 </tr>
             {% empty %}
                 <tr>
-                    <td colspan="11" style="text-align:center;">
+                    <td colspan="6" style="text-align:center;">
                         Brak pozycji w tym zamówieniu.
                     </td>
                 </tr>
@@ -116,9 +91,46 @@
         </tbody>
     </table>
 
-    <div class="summary">
-        Suma zamówienia: {{ suma }} zł
+    <div class="card">
+        <h2>Rabat</h2>
+
+        <form method="post" action="{% url 'core:zamowienie_ustaw_rabat' zamowienie.id %}">
+            {% csrf_token %}
+
+            <div class="form-grid">
+                {% for field in rabat_form %}
+                    <div>
+                        <label>{{ field.label }}</label>
+                        {{ field }}
+                        {{ field.errors }}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="actions" style="margin-top: 15px;">
+                <button type="submit" class="btn">
+                    Zapisz rabat
+                </button>
+            </div>
+        </form>
     </div>
+
+    <div class="summary">
+        Suma pozycji: {{ suma }} zł<br>
+        Rabat: {{ zamowienie.rabat_wartosc }}{% if zamowienie.rabat_typ == "PROCENT" %}%{% else %} zł{% endif %}<br>
+        Kwota końcowa: {{ zamowienie.kwota_koncowa }} zł
+    </div>
+
+    {% if zamowienie.status == "ROBOCZE" %}
+        <div class="card" style="text-align: center;">
+            <form method="post" action="{% url 'core:zamowienie_przyjmij' zamowienie.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success">
+                    Przyjmij zamówienie
+                </button>
+            </form>
+        </div>
+    {% endif %}
 
 </div>
 

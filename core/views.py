@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.models import User
+import json
 
 from .forms import (
     KlientForm,
@@ -14,6 +15,8 @@ from .forms import (
     PlatnoscForm,
     PracownikCreateForm,
     PracownikEditForm,
+    PozycjaZamowieniaFormSet,
+    RabatForm,
 )
 
 from .models import (
@@ -28,8 +31,20 @@ from .models import (
     ProcesMagazynowy,
     Platnosc,
     PracownikProfil,
+    Cennik,
 )
 
+
+def aktualizuj_platnosc_zamowienia(zamowienie):
+    zamowienie.przelicz_kwote()
+
+    Platnosc.objects.update_or_create(
+        zamowienie=zamowienie,
+        defaults={
+            "kwota": zamowienie.kwota_koncowa,
+            "rabat": zamowienie.rabat_wartosc,
+        },
+    )
 
 @login_required
 def index(request):
@@ -245,10 +260,11 @@ def material_usun(request, material_id):
 def rozmiary_lista(request):
     query = request.GET.get("q", "")
 
-    rozmiary = RozmiarBlachy.objects.all().order_by("nazwa")
+    rozmiary = RozmiarBlachy.objects.all().order_by(
+    "szerokosc_mm",
+    "wysokosc_mm",
+    )
 
-    if query:
-        rozmiary = rozmiary.filter(nazwa__icontains=query)
 
     return render(
         request,
@@ -408,7 +424,9 @@ def zamowienia_lista(request):
     query = request.GET.get("q", "")
     status = request.GET.get("status", "")
 
-    zamowienia = Zamowienie.objects.select_related("klient").all().order_by("-data_utworzenia")
+    zamowienia = Zamowienie.objects.select_related("klient").exclude(
+        status="ROBOCZE"
+    ).order_by("-data_utworzenia")
 
     if query:
         zamowienia = zamowienia.filter(
@@ -438,22 +456,83 @@ def zamowienia_lista(request):
 
 @login_required
 def zamowienie_dodaj(request):
-    if request.method == "POST":
-        form = ZamowienieForm(request.POST)
+    materialy = Material.objects.all().order_by("nazwa")
+    rozmiary = RozmiarBlachy.objects.all().order_by("szerokosc_mm", "wysokosc_mm")
+    typy_uslug = TypUslugi.objects.all().order_by("nazwa")
 
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Zamówienie zostało utworzone.")
-            return redirect("core:zamowienia_lista")
+    materialy_json = json.dumps([
+        {
+            "id": material.id,
+            "nazwa": str(material),
+            "cena_za_m2": float(material.cena_za_m2),
+        }
+        for material in materialy
+    ])
+
+    rozmiary_json = json.dumps([
+        {
+            "id": rozmiar.id,
+            "szerokosc": rozmiar.szerokosc_mm,
+            "wysokosc": rozmiar.wysokosc_mm,
+        }
+        for rozmiar in rozmiary
+    ])
+
+    uslugi_json = json.dumps([
+        {
+            "id": typ.id,
+            "nazwa": typ.nazwa,
+            "cena": float(
+                Cennik.objects.filter(typ_uslugi=typ)
+                .order_by("-data_od")
+                .first()
+                .cena
+            ) if Cennik.objects.filter(typ_uslugi=typ).exists() else 0,
+        }
+        for typ in typy_uslug
+    ])
+
+    if request.method == "POST":
+        zamowienie_form = ZamowienieForm(request.POST)
+        pozycje_formset = PozycjaZamowieniaFormSet(request.POST, prefix="pozycje")
+
+        if zamowienie_form.is_valid() and pozycje_formset.is_valid():
+            poprawne_pozycje = [
+                form for form in pozycje_formset
+                if form.cleaned_data and not form.cleaned_data.get("DELETE")
+            ]
+
+            if not poprawne_pozycje:
+                messages.error(request, "Dodaj przynajmniej jedną pozycję zamówienia.")
+            else:
+                zamowienie = zamowienie_form.save(commit=False)
+                zamowienie.status = "ROBOCZE"
+                zamowienie.save()
+
+                for form in poprawne_pozycje:
+                    pozycja = form.save(commit=False)
+                    pozycja.zamowienie = zamowienie
+                    pozycja.save()
+
+                zamowienie.przelicz_kwote()
+
+                messages.success(request, "Zamówienie robocze zostało zapisane.")
+                return redirect("core:zamowienie_szczegoly", zamowienie_id=zamowienie.id)
+
     else:
-        form = ZamowienieForm()
+        zamowienie_form = ZamowienieForm()
+        pozycje_formset = PozycjaZamowieniaFormSet(prefix="pozycje")
 
     return render(
         request,
         "zamowienia/formularz.html",
         {
-            "form": form,
-            "tytul": "Dodaj zamówienie",
+            "zamowienie_form": zamowienie_form,
+            "pozycje_formset": pozycje_formset,
+            "tytul": "Nowe zamówienie",
+            "materialy_json": materialy_json,
+            "rozmiary_json": rozmiary_json,
+            "uslugi_json": uslugi_json,
         },
     )
 
@@ -509,10 +588,9 @@ def zamowienie_szczegoly(request, zamowienie_id):
         "material",
         "rozmiar",
         "typ_uslugi",
-        "przypisany_pracownik",
     ).all()
 
-    suma = sum(p.cena * p.ilosc for p in pozycje)
+    suma = sum(p.wartosc for p in pozycje)
 
     return render(
         request,
@@ -521,10 +599,43 @@ def zamowienie_szczegoly(request, zamowienie_id):
             "zamowienie": zamowienie,
             "pozycje": pozycje,
             "suma": suma,
+            "rabat_form": RabatForm(instance=zamowienie),
         },
     )
 
+@login_required
+def zamowienie_ustaw_rabat(request, zamowienie_id):
+    zamowienie = get_object_or_404(Zamowienie, id=zamowienie_id)
 
+    if request.method == "POST":
+        form = RabatForm(request.POST, instance=zamowienie)
+
+        if form.is_valid():
+            form.save()
+            aktualizuj_platnosc_zamowienia(zamowienie)
+            messages.success(request, "Rabat został zapisany.")
+
+    return redirect("core:zamowienie_szczegoly", zamowienie_id=zamowienie.id)
+
+
+@login_required
+def zamowienie_przyjmij(request, zamowienie_id):
+    zamowienie = get_object_or_404(Zamowienie, id=zamowienie_id)
+
+    if request.method == "POST":
+        if not zamowienie.pozycje.exists():
+            messages.error(request, "Nie można przyjąć zamówienia bez pozycji.")
+            return redirect("core:zamowienie_szczegoly", zamowienie_id=zamowienie.id)
+
+        zamowienie.status = "ZATWIERDZONE"
+        zamowienie.save(update_fields=["status"])
+
+        aktualizuj_platnosc_zamowienia(zamowienie)
+
+        messages.success(request, "Zamówienie zostało przyjęte.")
+        return redirect("core:zamowienia_lista")
+
+    return redirect("core:zamowienie_szczegoly", zamowienie_id=zamowienie.id)
 @login_required
 def pozycja_dodaj(request, zamowienie_id):
     zamowienie = get_object_or_404(Zamowienie, id=zamowienie_id)
@@ -536,6 +647,7 @@ def pozycja_dodaj(request, zamowienie_id):
             pozycja = form.save(commit=False)
             pozycja.zamowienie = zamowienie
             pozycja.save()
+            aktualizuj_platnosc_zamowienia(zamowienie)
 
             messages.success(request, "Pozycja zamówienia została dodana.")
             return redirect("core:zamowienie_szczegoly", zamowienie_id=zamowienie.id)
@@ -563,6 +675,7 @@ def pozycja_edytuj(request, pozycja_id):
 
         if form.is_valid():
             form.save()
+            aktualizuj_platnosc_zamowienia(zamowienie)
             messages.success(request, "Pozycja zamówienia została zaktualizowana.")
             return redirect("core:zamowienie_szczegoly", zamowienie_id=zamowienie.id)
     else:
@@ -586,6 +699,7 @@ def pozycja_usun(request, pozycja_id):
 
     if request.method == "POST":
         pozycja.delete()
+        aktualizuj_platnosc_zamowienia(zamowienie)
         messages.success(request, "Pozycja zamówienia została usunięta.")
         return redirect("core:zamowienie_szczegoly", zamowienie_id=zamowienie.id)
 
@@ -599,61 +713,16 @@ def pozycja_usun(request, pozycja_id):
     )
 @login_required
 def moje_prace(request):
-    pozycje = PozycjaZamowienia.objects.select_related(
-        "zamowienie",
-        "zamowienie__klient",
-        "material",
-        "rozmiar",
-        "typ_uslugi",
-    ).filter(
-        przypisany_pracownik=request.user
-    ).order_by("-id")
 
     return render(
         request,
         "moje_prace/lista.html",
         {
-            "pozycje": pozycje,
+            "pozycje": [],
         },
     )
 
 
-@login_required
-def zmien_status_pozycji(request, pozycja_id):
-    pozycja = get_object_or_404(
-        PozycjaZamowienia,
-        id=pozycja_id,
-        przypisany_pracownik=request.user,
-    )
-
-    if request.method == "POST":
-        nowy_status = request.POST.get("status")
-
-        if nowy_status in ["PRZYJETA", "REALIZACJA", "ZREALIZOWANA"]:
-            pozycja.status = nowy_status
-            pozycja.save()
-
-            zamowienie = pozycja.zamowienie
-            wszystkie_zrealizowane = zamowienie.pozycje.exists() and all(
-                p.status == "ZREALIZOWANA"
-                for p in zamowienie.pozycje.all()
-            )
-
-            if wszystkie_zrealizowane:
-                zamowienie.status = "GOTOWE"
-                zamowienie.save()
-                messages.success(
-                    request,
-                    f"Pozycja zaktualizowana. Zamówienie #{zamowienie.id} jest gotowe do odbioru.",
-                )
-            else:
-                if zamowienie.status == "PRZYJETE":
-                    zamowienie.status = "REALIZACJA"
-                    zamowienie.save()
-
-                messages.success(request, "Status pozycji został zaktualizowany.")
-
-    return redirect("core:moje_prace")
 
 @login_required
 def magazyn_lista(request):

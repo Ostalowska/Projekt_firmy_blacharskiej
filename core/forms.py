@@ -1,4 +1,7 @@
 from django import forms
+from django.contrib.auth.models import User
+from django.forms import formset_factory
+
 from .models import (
     Klient,
     Material,
@@ -108,33 +111,27 @@ class RozmiarBlachyForm(forms.ModelForm):
     class Meta:
         model = RozmiarBlachy
         fields = [
-            "nazwa",
             "szerokosc_mm",
             "wysokosc_mm",
-            "standardowy",
         ]
 
         labels = {
-            "nazwa": "Nazwa rozmiaru",
             "szerokosc_mm": "Szerokość (mm)",
             "wysokosc_mm": "Wysokość (mm)",
-            "standardowy": "Rozmiar standardowy",
         }
 
     def clean_szerokosc_mm(self):
         szerokosc = self.cleaned_data["szerokosc_mm"]
-        standardowy = self.cleaned_data.get("standardowy")
 
-        if standardowy and szerokosc <= 0:
+        if szerokosc <= 0:
             raise forms.ValidationError("Szerokość musi być większa od zera.")
 
         return szerokosc
 
     def clean_wysokosc_mm(self):
         wysokosc = self.cleaned_data["wysokosc_mm"]
-        standardowy = self.cleaned_data.get("standardowy")
 
-        if standardowy and wysokosc <= 0:
+        if wysokosc <= 0:
             raise forms.ValidationError("Wysokość musi być większa od zera.")
 
         return wysokosc
@@ -144,17 +141,14 @@ class TypUslugiForm(forms.ModelForm):
         model = TypUslugi
         fields = [
             "nazwa",
-            "jednostka",
         ]
 
         labels = {
             "nazwa": "Nazwa usługi",
-            "jednostka": "Jednostka",
         }
 
         widgets = {
             "nazwa": forms.TextInput(attrs={"placeholder": "Np. Cięcie"}),
-            "jednostka": forms.TextInput(attrs={"placeholder": "Np. szt., m², mb"}),
         }
 
     def clean_nazwa(self):
@@ -170,13 +164,11 @@ class ZamowienieForm(forms.ModelForm):
         model = Zamowienie
         fields = [
             "klient",
-            "status",
             "uwagi",
         ]
 
         labels = {
             "klient": "Klient",
-            "status": "Status",
             "uwagi": "Uwagi",
         }
 
@@ -193,45 +185,86 @@ class PozycjaZamowieniaForm(forms.ModelForm):
         fields = [
             "material",
             "rozmiar",
+            "czy_niestandardowy",
+            "szerokosc_niestandardowa_mm",
+            "wysokosc_niestandardowa_mm",
             "typ_uslugi",
-            "przypisany_pracownik",
             "ilosc",
-            "cena",
-            "status",
-            "czy_powstal_odpad",
-            "opis_odpadu",
         ]
 
         labels = {
             "material": "Materiał",
-            "rozmiar": "Rozmiar blachy",
+            "rozmiar": "Rozmiar standardowy",
+            "czy_niestandardowy": "Rozmiar niestandardowy",
+            "szerokosc_niestandardowa_mm": "Szerokość niestandardowa (mm)",
+            "wysokosc_niestandardowa_mm": "Wysokość niestandardowa (mm)",
             "typ_uslugi": "Typ usługi",
-            "przypisany_pracownik": "Przypisany pracownik",
             "ilosc": "Ilość",
-            "cena": "Cena",
-            "status": "Status",
-            "czy_powstal_odpad": "Czy powstał odpad?",
-            "opis_odpadu": "Opis odpadu",
-        }
-
-        widgets = {
-            "opis_odpadu": forms.Textarea(attrs={
-                "rows": 3,
-                "placeholder": "Opcjonalny opis odpadu..."
-            }),
         }
 
     def clean_ilosc(self):
         ilosc = self.cleaned_data["ilosc"]
+
         if ilosc <= 0:
             raise forms.ValidationError("Ilość musi być większa od zera.")
+
         return ilosc
 
-    def clean_cena(self):
-        cena = self.cleaned_data["cena"]
-        if cena < 0:
-            raise forms.ValidationError("Cena nie może być ujemna.")
-        return cena
+    def clean(self):
+        cleaned_data = super().clean()
+
+        czy_niestandardowy = cleaned_data.get("czy_niestandardowy")
+        rozmiar = cleaned_data.get("rozmiar")
+        szerokosc = cleaned_data.get("szerokosc_niestandardowa_mm")
+        wysokosc = cleaned_data.get("wysokosc_niestandardowa_mm")
+
+        if czy_niestandardowy:
+            if not szerokosc or not wysokosc:
+                raise forms.ValidationError(
+                    "Dla rozmiaru niestandardowego podaj szerokość i wysokość."
+                )
+
+            if szerokosc <= 0 or wysokosc <= 0:
+                raise forms.ValidationError(
+                    "Wymiary niestandardowe muszą być większe od zera."
+                )
+
+        else:
+            if not rozmiar:
+                raise forms.ValidationError(
+                    "Wybierz rozmiar standardowy albo zaznacz rozmiar niestandardowy."
+                )
+
+        return cleaned_data
+
+
+PozycjaZamowieniaFormSet = formset_factory(
+    PozycjaZamowieniaForm,
+    extra=1,
+    can_delete=True
+)
+
+
+class RabatForm(forms.ModelForm):
+    class Meta:
+        model = Zamowienie
+        fields = [
+            "rabat_typ",
+            "rabat_wartosc",
+        ]
+
+        labels = {
+            "rabat_typ": "Typ rabatu",
+            "rabat_wartosc": "Wartość rabatu",
+        }
+
+    def clean_rabat_wartosc(self):
+        rabat = self.cleaned_data["rabat_wartosc"]
+
+        if rabat < 0:
+            raise forms.ValidationError("Rabat nie może być ujemny.")
+
+        return rabat
         
 class ProcesMagazynowyForm(forms.ModelForm):
     class Meta:

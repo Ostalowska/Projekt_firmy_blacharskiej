@@ -11,7 +11,6 @@
     .btn { padding: 9px 14px; background: #2c3e50; color: white; text-decoration: none; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; }
     .btn:hover { background: #1f2a38; }
     .btn-danger { background: #c0392b; }
-    .btn-danger:hover { background: #922b21; }
     .btn-secondary { background: #7f8c8d; }
     .messages { margin-bottom: 15px; }
     .message { background: #d4edda; color: #155724; padding: 12px; border-radius: 6px; text-align: center; font-weight: bold; }
@@ -20,7 +19,7 @@
     th, td { padding: 12px 15px; border-bottom: 1px solid #eee; text-align: left; }
     tbody tr:nth-child(even) { background: #f8f9fa; }
     tbody tr:hover { background: #eef2f7; }
-    .actions { display: flex; gap: 8px; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .status { font-weight: bold; }
 </style>
 
@@ -38,7 +37,7 @@
 
     <div class="top-bar">
         <a class="btn" href="{% url 'core:zamowienie_dodaj' %}">
-            Dodaj zamówienie
+            Nowe zamówienie
         </a>
 
         <form method="get" class="search-form">
@@ -47,9 +46,11 @@
             <select name="status">
                 <option value="">Wszystkie statusy</option>
                 {% for wartosc, etykieta in statusy %}
-                    <option value="{{ wartosc }}" {% if status == wartosc %}selected{% endif %}>
-                        {{ etykieta }}
-                    </option>
+                    {% if wartosc != "ROBOCZE" %}
+                        <option value="{{ wartosc }}" {% if status == wartosc %}selected{% endif %}>
+                            {{ etykieta }}
+                        </option>
+                    {% endif %}
                 {% endfor %}
             </select>
 
@@ -66,12 +67,12 @@
     <table>
         <thead>
             <tr>
-                <th>ID</th>
+                <th>Numer</th>
                 <th>Klient</th>
                 <th>Email</th>
                 <th>Status</th>
                 <th>Data utworzenia</th>
-                <th>Uwagi</th>
+                <th>Kwota</th>
                 <th>Akcje</th>
             </tr>
         </thead>
@@ -79,18 +80,17 @@
         <tbody>
             {% for zamowienie in zamowienia %}
                 <tr>
-                    <td>#{{ zamowienie.id }}</td>
+                    <td>{{ zamowienie.numer }}</td>
                     <td>{{ zamowienie.klient.imie }} {{ zamowienie.klient.nazwisko }}</td>
                     <td>{{ zamowienie.klient.email }}</td>
                     <td class="status">{{ zamowienie.get_status_display }}</td>
                     <td>{{ zamowienie.data_utworzenia|date:"d.m.Y H:i" }}</td>
-                    <td>{{ zamowienie.uwagi|default:"-"|truncatechars:40 }}</td>
+                    <td>{{ zamowienie.kwota_koncowa }} zł</td>
                     <td>
                         <div class="actions">
-                            <a class="btn" href="{% url 'core:zamowienie_edytuj' zamowienie.id %}">
-                                Edytuj
+                            <a class="btn" href="{% url 'core:zamowienie_szczegoly' zamowienie.id %}">
+                                Szczegóły
                             </a>
-							<a class="btn" href="{% url 'core:zamowienie_szczegoly' zamowienie.id %}">Szczegóły</a>
 
                             <a class="btn btn-danger" href="{% url 'core:zamowienie_usun' zamowienie.id %}">
                                 Usuń
@@ -101,7 +101,7 @@
             {% empty %}
                 <tr>
                     <td colspan="7" style="text-align:center;">
-                        Brak zamówień do wyświetlenia.
+                        Brak przyjętych zamówień do wyświetlenia.
                     </td>
                 </tr>
             {% endfor %}

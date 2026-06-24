@@ -69,7 +69,6 @@ urlpatterns = [
     path("pozycje/<int:pozycja_id>/usun/", views.pozycja_usun, name="pozycja_usun"),
     
     path("moje-prace/", views.moje_prace, name="moje_prace"),
-    path("moje-prace/<int:pozycja_id>/status/", views.zmien_status_pozycji, name="zmien_status_pozycji"),
     
     path("magazyn/", views.magazyn_lista, name="magazyn_lista"),
     path("magazyn/proces/dodaj/", views.proces_magazynowy_dodaj, name="proces_magazynowy_dodaj"),
@@ -83,4 +82,6 @@ urlpatterns = [
     path("pracownicy/dodaj/", views.pracownik_dodaj, name="pracownik_dodaj"),
     path("pracownicy/<int:pracownik_id>/edytuj/", views.pracownik_edytuj, name="pracownik_edytuj"),
     path("pracownicy/<int:pracownik_id>/dezaktywuj/", views.pracownik_dezaktywuj, name="pracownik_dezaktywuj"),
+    path("zamowienia/<int:zamowienie_id>/rabat/", views.zamowienie_ustaw_rabat, name="zamowienie_ustaw_rabat"),
+    path("zamowienia/<int:zamowienie_id>/przyjmij/", views.zamowienie_przyjmij, name="zamowienie_przyjmij"),
 ]
