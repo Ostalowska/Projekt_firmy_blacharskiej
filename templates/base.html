@@ -104,14 +104,14 @@
 				<a href="{% url 'core:materialy_lista' %}">Materiały</a>
 				<a href="{% url 'core:rozmiary_lista' %}">Rozmiary blach</a>
 				<a href="{% url 'core:typy_uslug_lista' %}">Typy usług</a>
-				<a href="#">Magazyn</a>
+				<a href="{% url 'core:magazyn_lista' %}">Magazyn</a>
 				<a href="{% url 'core:zamowienia_lista' %}">Zamówienia</a>
 				<a href="{% url 'core:moje_prace' %}">Moje Zadania</a>
 				<a href="#">Płatności</a>
             {% endif %}
 
             {% if czy_magazynier %}
-                <a href="#">Magazyn</a>
+                <a href="{% url 'core:magazyn_lista' %}">Magazyn</a>
                 <a href="{% url 'core:zamowienia_lista' %}">Zamówienia</a>
             {% endif %}
 

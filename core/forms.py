@@ -1,5 +1,15 @@
 from django import forms
-from .models import Klient, Material, RozmiarBlachy, TypUslugi, Zamowienie, PozycjaZamowienia
+from .models import (
+    Klient,
+    Material,
+    RozmiarBlachy,
+    TypUslugi,
+    Zamowienie,
+    PozycjaZamowienia,
+    Magazyn,
+    StanMagazynowy,
+    ProcesMagazynowy,
+)
 
 
 class KlientForm(forms.ModelForm):
@@ -220,3 +230,37 @@ class PozycjaZamowieniaForm(forms.ModelForm):
         if cena < 0:
             raise forms.ValidationError("Cena nie może być ujemna.")
         return cena
+        
+class ProcesMagazynowyForm(forms.ModelForm):
+    class Meta:
+        model = ProcesMagazynowy
+        fields = [
+            "magazyn",
+            "material",
+            "typ",
+            "ilosc",
+            "opis",
+        ]
+
+        labels = {
+            "magazyn": "Magazyn",
+            "material": "Materiał",
+            "typ": "Typ operacji",
+            "ilosc": "Ilość",
+            "opis": "Opis",
+        }
+
+        widgets = {
+            "opis": forms.Textarea(attrs={
+                "rows": 3,
+                "placeholder": "Np. dostawa materiału albo wydanie do produkcji..."
+            }),
+        }
+
+    def clean_ilosc(self):
+        ilosc = self.cleaned_data["ilosc"]
+
+        if ilosc <= 0:
+            raise forms.ValidationError("Ilość musi być większa od zera.")
+
+        return ilosc

@@ -70,4 +70,7 @@ urlpatterns = [
     
     path("moje-prace/", views.moje_prace, name="moje_prace"),
     path("moje-prace/<int:pozycja_id>/status/", views.zmien_status_pozycji, name="zmien_status_pozycji"),
+    
+    path("magazyn/", views.magazyn_lista, name="magazyn_lista"),
+    path("magazyn/proces/dodaj/", views.proces_magazynowy_dodaj, name="proces_magazynowy_dodaj"),
 ]

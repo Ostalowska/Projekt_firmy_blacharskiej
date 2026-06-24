@@ -9,6 +9,7 @@ from .forms import (
     TypUslugiForm,
     ZamowienieForm,
     PozycjaZamowieniaForm,
+    ProcesMagazynowyForm,
 )
 
 from .models import (
@@ -18,6 +19,9 @@ from .models import (
     TypUslugi,
     Zamowienie,
     PozycjaZamowienia,
+    Magazyn,
+    StanMagazynowy,
+    ProcesMagazynowy,
 )
 
 
@@ -644,3 +648,100 @@ def zmien_status_pozycji(request, pozycja_id):
                 messages.success(request, "Status pozycji został zaktualizowany.")
 
     return redirect("core:moje_prace")
+
+@login_required
+def magazyn_lista(request):
+    stany = StanMagazynowy.objects.select_related(
+        "magazyn",
+        "material",
+    ).order_by("material__nazwa")
+
+    procesy = ProcesMagazynowy.objects.select_related(
+        "magazyn",
+        "material",
+        "pracownik",
+    ).order_by("-data")[:20]
+
+    return render(
+        request,
+        "magazyn/lista.html",
+        {
+            "stany": stany,
+            "procesy": procesy,
+        },
+    )
+
+
+@login_required
+def proces_magazynowy_dodaj(request):
+    if request.method == "POST":
+        form = ProcesMagazynowyForm(request.POST)
+
+        if form.is_valid():
+            proces = form.save(commit=False)
+            proces.pracownik = request.user
+
+            magazyn = proces.magazyn
+            material = proces.material
+            ilosc = proces.ilosc
+
+            stan, created = StanMagazynowy.objects.get_or_create(
+                magazyn=magazyn,
+                material=material,
+                defaults={"ilosc": 0},
+            )
+
+            if proces.typ == "PRZYJECIE":
+                stan.ilosc += ilosc
+                stan.save()
+                proces.save()
+
+                messages.success(
+                    request,
+                    "Materiał został przyjęty na magazyn.",
+                )
+
+                return redirect("core:magazyn_lista")
+
+            if proces.typ == "WYDANIE":
+                if stan.ilosc < ilosc:
+                    messages.error(
+                        request,
+                        "Nie można wydać więcej materiału niż jest na stanie.",
+                    )
+                    return redirect("core:proces_magazynowy_dodaj")
+
+                stan.ilosc -= ilosc
+                stan.save()
+                proces.save()
+
+                messages.success(
+                    request,
+                    "Materiał został wydany z magazynu.",
+                )
+
+                return redirect("core:magazyn_lista")
+
+            if proces.typ == "INWENTARYZACJA":
+                stan.ilosc = ilosc
+                stan.save()
+                proces.save()
+
+                messages.success(
+                    request,
+                    "Stan magazynowy został zaktualizowany przez inwentaryzację.",
+                )
+
+                return redirect("core:magazyn_lista")
+
+    else:
+        form = ProcesMagazynowyForm()
+
+    return render(
+        request,
+        "magazyn/formularz.html",
+        {
+            "form": form,
+            "tytul": "Dodaj proces magazynowy",
+        },
+    )
