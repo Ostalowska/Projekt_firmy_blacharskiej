@@ -587,3 +587,60 @@ def pozycja_usun(request, pozycja_id):
             "zamowienie": zamowienie,
         },
     )
+@login_required
+def moje_prace(request):
+    pozycje = PozycjaZamowienia.objects.select_related(
+        "zamowienie",
+        "zamowienie__klient",
+        "material",
+        "rozmiar",
+        "typ_uslugi",
+    ).filter(
+        przypisany_pracownik=request.user
+    ).order_by("-id")
+
+    return render(
+        request,
+        "moje_prace/lista.html",
+        {
+            "pozycje": pozycje,
+        },
+    )
+
+
+@login_required
+def zmien_status_pozycji(request, pozycja_id):
+    pozycja = get_object_or_404(
+        PozycjaZamowienia,
+        id=pozycja_id,
+        przypisany_pracownik=request.user,
+    )
+
+    if request.method == "POST":
+        nowy_status = request.POST.get("status")
+
+        if nowy_status in ["PRZYJETA", "REALIZACJA", "ZREALIZOWANA"]:
+            pozycja.status = nowy_status
+            pozycja.save()
+
+            zamowienie = pozycja.zamowienie
+            wszystkie_zrealizowane = zamowienie.pozycje.exists() and all(
+                p.status == "ZREALIZOWANA"
+                for p in zamowienie.pozycje.all()
+            )
+
+            if wszystkie_zrealizowane:
+                zamowienie.status = "GOTOWE"
+                zamowienie.save()
+                messages.success(
+                    request,
+                    f"Pozycja zaktualizowana. Zamówienie #{zamowienie.id} jest gotowe do odbioru.",
+                )
+            else:
+                if zamowienie.status == "PRZYJETE":
+                    zamowienie.status = "REALIZACJA"
+                    zamowienie.save()
+
+                messages.success(request, "Status pozycji został zaktualizowany.")
+
+    return redirect("core:moje_prace")

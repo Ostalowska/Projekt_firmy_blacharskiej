@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+    .page-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    h1 { text-align: center; color: #2c3e50; margin-bottom: 20px; }
+    .messages { margin-bottom: 15px; }
+    .message { background: #d4edda; color: #155724; padding: 12px; border-radius: 6px; text-align: center; font-weight: bold; }
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    thead { background: #2c3e50; color: white; }
+    th, td { padding: 12px 15px; border-bottom: 1px solid #eee; text-align: left; }
+    tbody tr:nth-child(even) { background: #f8f9fa; }
+    tbody tr:hover { background: #eef2f7; }
+    select { padding: 8px; border-radius: 5px; border: 1px solid #ccc; }
+    .btn { padding: 8px 12px; background: #2c3e50; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    .btn:hover { background: #1f2a38; }
+    .status { font-weight: bold; }
+</style>
+
+<div class="page-container">
+
+    <h1>Moje prace</h1>
+
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="message">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID pozycji</th>
+                <th>Zamówienie</th>
+                <th>Klient</th>
+                <th>Materiał</th>
+                <th>Rozmiar</th>
+                <th>Usługa</th>
+                <th>Ilość</th>
+                <th>Cena</th>
+                <th>Status</th>
+                <th>Zmień status</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for pozycja in pozycje %}
+                <tr>
+                    <td>#{{ pozycja.id }}</td>
+                    <td>#{{ pozycja.zamowienie.id }}</td>
+                    <td>
+                        {{ pozycja.zamowienie.klient.imie }}
+                        {{ pozycja.zamowienie.klient.nazwisko }}
+                    </td>
+                    <td>{{ pozycja.material.nazwa }} {{ pozycja.material.grubosc_mm }} mm</td>
+                    <td>{{ pozycja.rozmiar.nazwa }}</td>
+                    <td>{{ pozycja.typ_uslugi|default:"-" }}</td>
+                    <td>{{ pozycja.ilosc }}</td>
+                    <td>{{ pozycja.cena }} zł</td>
+                    <td class="status">{{ pozycja.get_status_display }}</td>
+                    <td>
+                        <form method="post" action="{% url 'core:zmien_status_pozycji' pozycja.id %}">
+                            {% csrf_token %}
+
+                            <select name="status">
+                                <option value="PRZYJETA" {% if pozycja.status == "PRZYJETA" %}selected{% endif %}>
+                                    Przyjęta
+                                </option>
+                                <option value="REALIZACJA" {% if pozycja.status == "REALIZACJA" %}selected{% endif %}>
+                                    W realizacji
+                                </option>
+                                <option value="ZREALIZOWANA" {% if pozycja.status == "ZREALIZOWANA" %}selected{% endif %}>
+                                    Zrealizowana
+                                </option>
+                            </select>
+
+                            <button type="submit" class="btn">
+                                Zapisz
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="10" style="text-align:center;">
+                        Nie masz jeszcze przypisanych prac.
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
+{% endblock %}

@@ -106,17 +106,17 @@
 				<a href="{% url 'core:typy_uslug_lista' %}">Typy usług</a>
 				<a href="#">Magazyn</a>
 				<a href="{% url 'core:zamowienia_lista' %}">Zamówienia</a>
-				<a href="#">Moje prace</a>
+				<a href="{% url 'core:moje_prace' %}">Moje Zadania</a>
 				<a href="#">Płatności</a>
             {% endif %}
 
             {% if czy_magazynier %}
                 <a href="#">Magazyn</a>
-                <a href="#">Zamówienia</a>
+                <a href="{% url 'core:zamowienia_lista' %}">Zamówienia</a>
             {% endif %}
 
             {% if czy_produkcja %}
-                <a href="#">Moje prace</a>
+                <a href="{% url 'core:moje_prace' %}">Moje Zadania</a>
                 <a href="#">Zamówienia</a>
             {% endif %}
 

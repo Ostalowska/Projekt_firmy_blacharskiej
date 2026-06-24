@@ -67,4 +67,7 @@ urlpatterns = [
     path("zamowienia/<int:zamowienie_id>/pozycje/dodaj/", views.pozycja_dodaj, name="pozycja_dodaj"),
     path("pozycje/<int:pozycja_id>/edytuj/", views.pozycja_edytuj, name="pozycja_edytuj"),
     path("pozycje/<int:pozycja_id>/usun/", views.pozycja_usun, name="pozycja_usun"),
+    
+    path("moje-prace/", views.moje_prace, name="moje_prace"),
+    path("moje-prace/<int:pozycja_id>/status/", views.zmien_status_pozycji, name="zmien_status_pozycji"),
 ]
