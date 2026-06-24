@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.models import User
 
 from .forms import (
     KlientForm,
@@ -11,6 +12,8 @@ from .forms import (
     PozycjaZamowieniaForm,
     ProcesMagazynowyForm,
     PlatnoscForm,
+    PracownikCreateForm,
+    PracownikEditForm,
 )
 
 from .models import (
@@ -24,6 +27,7 @@ from .models import (
     StanMagazynowy,
     ProcesMagazynowy,
     Platnosc,
+    PracownikProfil,
 )
 
 
@@ -830,5 +834,136 @@ def platnosc_usun(request, platnosc_id):
         "platnosci/usun.html",
         {
             "platnosc": platnosc,
+        },
+    )
+@login_required
+def pracownicy_lista(request):
+    query = request.GET.get("q", "")
+
+    pracownicy = PracownikProfil.objects.select_related("user").order_by("user__last_name")
+
+    if query:
+        pracownicy = pracownicy.filter(
+            user__first_name__icontains=query
+        ) | pracownicy.filter(
+            user__last_name__icontains=query
+        ) | pracownicy.filter(
+            user__username__icontains=query
+        ) | pracownicy.filter(
+            user__email__icontains=query
+        )
+
+    return render(
+        request,
+        "pracownicy/lista.html",
+        {
+            "pracownicy": pracownicy,
+            "query": query,
+        },
+    )
+
+
+@login_required
+def pracownik_dodaj(request):
+    if request.method == "POST":
+        form = PracownikCreateForm(request.POST)
+
+        if form.is_valid():
+            user = User.objects.create_user(
+                username=form.cleaned_data["username"],
+                password=form.cleaned_data["haslo"],
+                first_name=form.cleaned_data["imie"],
+                last_name=form.cleaned_data["nazwisko"],
+                email=form.cleaned_data["email"],
+            )
+
+            if form.cleaned_data["rola"] == "ADMIN":
+                user.is_staff = True
+                user.save()
+
+            PracownikProfil.objects.create(
+                user=user,
+                telefon=form.cleaned_data["telefon"],
+                rola=form.cleaned_data["rola"],
+            )
+
+            messages.success(request, "Pracownik i konto użytkownika zostały utworzone.")
+            return redirect("core:pracownicy_lista")
+    else:
+        form = PracownikCreateForm()
+
+    return render(
+        request,
+        "pracownicy/formularz.html",
+        {
+            "form": form,
+            "tytul": "Dodaj pracownika",
+        },
+    )
+
+
+@login_required
+def pracownik_edytuj(request, pracownik_id):
+    profil = get_object_or_404(PracownikProfil, id=pracownik_id)
+    user = profil.user
+
+    if request.method == "POST":
+        form = PracownikEditForm(request.POST, instance=profil)
+
+        if form.is_valid():
+            profil = form.save(commit=False)
+            profil.save()
+
+            user.first_name = form.cleaned_data["imie"]
+            user.last_name = form.cleaned_data["nazwisko"]
+            user.email = form.cleaned_data["email"]
+            user.is_active = form.cleaned_data["aktywny"]
+
+            if profil.rola == "ADMIN":
+                user.is_staff = True
+            else:
+                user.is_staff = False
+
+            user.save()
+
+            messages.success(request, "Dane pracownika zostały zaktualizowane.")
+            return redirect("core:pracownicy_lista")
+    else:
+        form = PracownikEditForm(
+            instance=profil,
+            initial={
+                "imie": user.first_name,
+                "nazwisko": user.last_name,
+                "email": user.email,
+                "aktywny": user.is_active,
+            },
+        )
+
+    return render(
+        request,
+        "pracownicy/formularz.html",
+        {
+            "form": form,
+            "tytul": "Edytuj pracownika",
+        },
+    )
+
+
+@login_required
+def pracownik_dezaktywuj(request, pracownik_id):
+    profil = get_object_or_404(PracownikProfil, id=pracownik_id)
+
+    if request.method == "POST":
+        profil.user.is_active = False
+        profil.user.save()
+
+        messages.success(request, "Pracownik został dezaktywowany.")
+        return redirect("core:pracownicy_lista")
+
+    return render(
+        request,
+        "pracownicy/dezaktywuj.html",
+        {
+            "pracownik": profil,
         },
     )

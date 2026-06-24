@@ -10,6 +10,7 @@ from .models import (
     StanMagazynowy,
     ProcesMagazynowy,
     Platnosc,
+    PracownikProfil,
 )
 
 
@@ -298,3 +299,39 @@ class PlatnoscForm(forms.ModelForm):
             raise forms.ValidationError("Rabat nie może być ujemny.")
 
         return rabat
+
+class PracownikCreateForm(forms.Form):
+    username = forms.CharField(label="Login", max_length=150)
+    imie = forms.CharField(label="Imię", max_length=50)
+    nazwisko = forms.CharField(label="Nazwisko", max_length=50)
+    email = forms.EmailField(label="Email", required=False)
+    telefon = forms.CharField(label="Telefon", max_length=20, required=False)
+    rola = forms.ChoiceField(label="Rola", choices=PracownikProfil.ROLE_CHOICES)
+    haslo = forms.CharField(label="Hasło", widget=forms.PasswordInput)
+
+    def clean_username(self):
+        username = self.cleaned_data["username"]
+        if User.objects.filter(username=username).exists():
+            raise forms.ValidationError("Użytkownik o takim loginie już istnieje.")
+        return username
+
+    def clean_email(self):
+        email = self.cleaned_data.get("email")
+        if email and User.objects.filter(email=email).exists():
+            raise forms.ValidationError("Użytkownik o takim emailu już istnieje.")
+        return email
+
+
+class PracownikEditForm(forms.ModelForm):
+    imie = forms.CharField(label="Imię", max_length=50)
+    nazwisko = forms.CharField(label="Nazwisko", max_length=50)
+    email = forms.EmailField(label="Email", required=False)
+    aktywny = forms.BooleanField(label="Aktywny", required=False)
+
+    class Meta:
+        model = PracownikProfil
+        fields = ["telefon", "rola"]
+        labels = {
+            "telefon": "Telefon",
+            "rola": "Rola",
+        }

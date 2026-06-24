@@ -78,4 +78,9 @@ urlpatterns = [
     path("platnosci/dodaj/", views.platnosc_dodaj, name="platnosc_dodaj"),
     path("platnosci/<int:platnosc_id>/edytuj/", views.platnosc_edytuj, name="platnosc_edytuj"),
     path("platnosci/<int:platnosc_id>/usun/", views.platnosc_usun, name="platnosc_usun"),
+    
+    path("pracownicy/", views.pracownicy_lista, name="pracownicy_lista"),
+    path("pracownicy/dodaj/", views.pracownik_dodaj, name="pracownik_dodaj"),
+    path("pracownicy/<int:pracownik_id>/edytuj/", views.pracownik_edytuj, name="pracownik_edytuj"),
+    path("pracownicy/<int:pracownik_id>/dezaktywuj/", views.pracownik_dezaktywuj, name="pracownik_dezaktywuj"),
 ]
