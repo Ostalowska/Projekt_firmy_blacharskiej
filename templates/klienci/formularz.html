@@ -4,12 +4,12 @@
 
 <style>
     .page-container {
-        max-width: 650px;
+        max-width: 850px;
         margin: 0 auto;
         padding: 20px;
     }
 
-    h1 {
+    h1, h2 {
         text-align: center;
         color: #2c3e50;
     }
@@ -19,12 +19,23 @@
         padding: 25px;
         border-radius: 10px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
     }
 
-    form {
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+    }
+
+    .form-row {
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 6px;
+    }
+
+    .full {
+        grid-column: 1 / -1;
     }
 
     label {
@@ -50,7 +61,8 @@
     .btn-row {
         display: flex;
         gap: 10px;
-        margin-top: 10px;
+        justify-content: flex-end;
+        margin-top: 20px;
     }
 
     .btn {
@@ -67,39 +79,94 @@
     .btn-secondary {
         background: #7f8c8d;
     }
+
+    @media (max-width: 800px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+    }
 </style>
 
 <div class="page-container">
 
     <h1>{{ tytul }}</h1>
 
-    <div class="form-card">
-        <form method="post">
-            {% csrf_token %}
+    <form method="post">
+        {% csrf_token %}
 
-            {{ form.non_field_errors }}
+        {{ form.non_field_errors }}
 
-            {% for field in form %}
-                <div>
-                    <label for="{{ field.id_for_label }}">
-                        {{ field.label }}
-                    </label>
-                    {{ field }}
-                    {{ field.errors }}
+        <div class="form-card">
+            <h2>Dane podstawowe</h2>
+
+            <div class="form-grid">
+                <div class="form-row">
+                    <label for="{{ form.imie.id_for_label }}">{{ form.imie.label }}</label>
+                    {{ form.imie }}
+                    {{ form.imie.errors }}
                 </div>
-            {% endfor %}
 
-            <div class="btn-row">
-                <button type="submit" class="btn">
-                    Zapisz
-                </button>
+                <div class="form-row">
+                    <label for="{{ form.nazwisko.id_for_label }}">{{ form.nazwisko.label }}</label>
+                    {{ form.nazwisko }}
+                    {{ form.nazwisko.errors }}
+                </div>
 
-                <a href="{% url 'core:klienci_lista' %}" class="btn btn-secondary">
-                    Anuluj
-                </a>
+                <div class="form-row">
+                    <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                    {{ form.email }}
+                    {{ form.email.errors }}
+                </div>
+
+                <div class="form-row">
+                    <label for="{{ form.telefon.id_for_label }}">{{ form.telefon.label }}</label>
+                    {{ form.telefon }}
+                    {{ form.telefon.errors }}
+                </div>
             </div>
-        </form>
-    </div>
+        </div>
+
+        <div class="form-card">
+            <h2>Adres</h2>
+
+            <div class="form-grid">
+                <div class="form-row full">
+                    <label for="{{ form.adres.id_for_label }}">{{ form.adres.label }}</label>
+                    {{ form.adres }}
+                    {{ form.adres.errors }}
+                    <small>Na razie adres zapisujemy jako jedno pole w bazie.</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-card">
+            <h2>Dane firmowe</h2>
+
+            <div class="form-grid">
+                <div class="form-row">
+                    <label for="{{ form.nazwa_firmy.id_for_label }}">{{ form.nazwa_firmy.label }}</label>
+                    {{ form.nazwa_firmy }}
+                    {{ form.nazwa_firmy.errors }}
+                </div>
+
+                <div class="form-row">
+                    <label for="{{ form.nip.id_for_label }}">{{ form.nip.label }}</label>
+                    {{ form.nip }}
+                    {{ form.nip.errors }}
+                </div>
+            </div>
+        </div>
+
+        <div class="btn-row">
+            <a href="{% url 'core:klienci_lista' %}" class="btn btn-secondary">
+                Anuluj
+            </a>
+
+            <button type="submit" class="btn">
+                Zapisz
+            </button>
+        </div>
+    </form>
 
 </div>
 

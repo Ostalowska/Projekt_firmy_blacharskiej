@@ -4,7 +4,7 @@
 
 <style>
     .page-container {
-        max-width: 1100px;
+        max-width: 1150px;
         margin: 0 auto;
         padding: 20px;
     }
@@ -21,11 +21,13 @@
         gap: 15px;
         margin-bottom: 20px;
         align-items: center;
+        flex-wrap: wrap;
     }
 
     .search-form {
         display: flex;
         gap: 8px;
+        flex-wrap: wrap;
     }
 
     input {
@@ -43,6 +45,7 @@
         border-radius: 5px;
         cursor: pointer;
         font-size: 14px;
+        display: inline-block;
     }
 
     .btn:hover {
@@ -53,45 +56,37 @@
         background: #c0392b;
     }
 
-    .btn-danger:hover {
-        background: #922b21;
-    }
-
     .btn-secondary {
         background: #7f8c8d;
     }
 
-    .messages {
-        margin-bottom: 15px;
-    }
-
-    .message {
-        background: #d4edda;
-        color: #155724;
-        padding: 12px;
-        border-radius: 6px;
-        text-align: center;
-        font-weight: bold;
+    .table-wrapper {
+        max-height: 65vh;
+        overflow-y: auto;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        background: white;
     }
 
     table {
         width: 100%;
         border-collapse: collapse;
         background: white;
-        border-radius: 10px;
-        overflow: hidden;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
 
     thead {
         background: #2c3e50;
         color: white;
+        position: sticky;
+        top: 0;
+        z-index: 2;
     }
 
     th, td {
         padding: 12px 15px;
         border-bottom: 1px solid #eee;
         text-align: left;
+        vertical-align: top;
     }
 
     tbody tr:nth-child(even) {
@@ -105,20 +100,27 @@
     .actions {
         display: flex;
         gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .messages-bottom {
+        margin-top: 20px;
+    }
+
+    .message {
+        background: #d4edda;
+        color: #155724;
+        padding: 12px;
+        border-radius: 6px;
+        text-align: center;
+        font-weight: bold;
+        margin-bottom: 8px;
     }
 </style>
 
 <div class="page-container">
 
     <h1>Klienci</h1>
-
-    {% if messages %}
-        <div class="messages">
-            {% for message in messages %}
-                <div class="message">{{ message }}</div>
-            {% endfor %}
-        </div>
-    {% endif %}
 
     <div class="top-bar">
         <a class="btn" href="{% url 'core:klient_dodaj' %}">
@@ -130,56 +132,66 @@
             <button type="submit" class="btn">Szukaj</button>
 
             {% if query %}
-                <a href="{% url 'core:klienci_lista' %}" class="btn btn-secondary">Wyczyść</a>
+                <a href="{% url 'core:klienci_lista' %}" class="btn btn-secondary">
+                    Wyczyść
+                </a>
             {% endif %}
         </form>
     </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Imię i nazwisko</th>
-                <th>Email</th>
-                <th>Telefon</th>
-                <th>Adres</th>
-                <th>Firma</th>
-                <th>NIP</th>
-                <th>Akcje</th>
-            </tr>
-        </thead>
-
-        <tbody>
-            {% for klient in klienci %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
                 <tr>
-                    <td>#{{ klient.id }}</td>
-                    <td>{{ klient.imie }} {{ klient.nazwisko }}</td>
-                    <td>{{ klient.email }}</td>
-                    <td>{{ klient.telefon|default:"-" }}</td>
-                    <td>{{ klient.adres }}</td>
-                    <td>{{ klient.nazwa_firmy|default:"-" }}</td>
-                    <td>{{ klient.nip|default:"-" }}</td>
-                    <td>
-                        <div class="actions">
-                            <a class="btn" href="{% url 'core:klient_edytuj' klient.id %}">
-                                Edytuj
-                            </a>
+                    <th>Imię i nazwisko</th>
+                    <th>Email</th>
+                    <th>Telefon</th>
+                    <th>Adres</th>
+                    <th>Firma</th>
+                    <th>NIP</th>
+                    <th>Akcje</th>
+                </tr>
+            </thead>
 
-                            <a class="btn btn-danger" href="{% url 'core:klient_usun' klient.id %}">
-                                Usuń
-                            </a>
-                        </div>
-                    </td>
-                </tr>
-            {% empty %}
-                <tr>
-                    <td colspan="8" style="text-align:center;">
-                        Brak klientów do wyświetlenia.
-                    </td>
-                </tr>
+            <tbody>
+                {% for klient in klienci %}
+                    <tr>
+                        <td>{{ klient.imie }} {{ klient.nazwisko }}</td>
+                        <td>{{ klient.email }}</td>
+                        <td>{{ klient.telefon|default:"-" }}</td>
+                        <td>{{ klient.adres }}</td>
+                        <td>{{ klient.nazwa_firmy|default:"-" }}</td>
+                        <td>{{ klient.nip|default:"-" }}</td>
+                        <td>
+                            <div class="actions">
+                                <a class="btn" href="{% url 'core:klient_edytuj' klient.id %}">
+                                    Edytuj
+                                </a>
+
+                                <a class="btn btn-danger" href="{% url 'core:klient_usun' klient.id %}">
+                                    Usuń
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7" style="text-align:center;">
+                            Brak klientów do wyświetlenia.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if messages %}
+        <div class="messages-bottom">
+            {% for message in messages %}
+                <div class="message">{{ message }}</div>
             {% endfor %}
-        </tbody>
-    </table>
+        </div>
+    {% endif %}
 
 </div>
 
