@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+    .page-container { max-width: 700px; margin: 0 auto; padding: 20px; }
+    h1 { text-align: center; color: #2c3e50; }
+    .form-card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    form { display: flex; flex-direction: column; gap: 12px; }
+    label { font-weight: bold; color: #2c3e50; }
+    input, select, textarea { padding: 10px; border-radius: 6px; border: 1px solid #ccc; width: 100%; box-sizing: border-box; }
+    .errorlist { color: #c0392b; margin: 0; padding-left: 18px; font-size: 14px; }
+    .btn-row { display: flex; gap: 10px; margin-top: 10px; }
+    .btn { padding: 10px 15px; background: #2c3e50; color: white; border: none; border-radius: 5px; text-decoration: none; cursor: pointer; text-align: center; }
+    .btn-secondary { background: #7f8c8d; }
+</style>
+
+<div class="page-container">
+
+    <h1>{{ tytul }}</h1>
+
+    <div class="form-card">
+        <form method="post">
+            {% csrf_token %}
+
+            {{ form.non_field_errors }}
+
+            {% for field in form %}
+                <div>
+                    <label for="{{ field.id_for_label }}">
+                        {{ field.label }}
+                    </label>
+                    {{ field }}
+                    {{ field.errors }}
+                </div>
+            {% endfor %}
+
+            <div class="btn-row">
+                <button type="submit" class="btn">
+                    Zapisz
+                </button>
+
+                <a href="{% url 'core:platnosci_lista' %}" class="btn btn-secondary">
+                    Anuluj
+                </a>
+            </div>
+        </form>
+    </div>
+
+</div>
+
+{% endblock %}

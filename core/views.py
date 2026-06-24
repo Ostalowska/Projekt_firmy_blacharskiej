@@ -10,6 +10,7 @@ from .forms import (
     ZamowienieForm,
     PozycjaZamowieniaForm,
     ProcesMagazynowyForm,
+    PlatnoscForm,
 )
 
 from .models import (
@@ -22,6 +23,7 @@ from .models import (
     Magazyn,
     StanMagazynowy,
     ProcesMagazynowy,
+    Platnosc,
 )
 
 
@@ -743,5 +745,90 @@ def proces_magazynowy_dodaj(request):
         {
             "form": form,
             "tytul": "Dodaj proces magazynowy",
+        },
+    )
+@login_required
+def platnosci_lista(request):
+    status = request.GET.get("status", "")
+
+    platnosci = Platnosc.objects.select_related(
+        "zamowienie",
+        "zamowienie__klient",
+    ).order_by("-data_utworzenia")
+
+    if status:
+        platnosci = platnosci.filter(status=status)
+
+    return render(
+        request,
+        "platnosci/lista.html",
+        {
+            "platnosci": platnosci,
+            "status": status,
+            "statusy": Platnosc.STATUS_CHOICES,
+        },
+    )
+
+
+@login_required
+def platnosc_dodaj(request):
+    if request.method == "POST":
+        form = PlatnoscForm(request.POST)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Płatność została dodana.")
+            return redirect("core:platnosci_lista")
+    else:
+        form = PlatnoscForm()
+
+    return render(
+        request,
+        "platnosci/formularz.html",
+        {
+            "form": form,
+            "tytul": "Dodaj płatność",
+        },
+    )
+
+
+@login_required
+def platnosc_edytuj(request, platnosc_id):
+    platnosc = get_object_or_404(Platnosc, id=platnosc_id)
+
+    if request.method == "POST":
+        form = PlatnoscForm(request.POST, instance=platnosc)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Płatność została zaktualizowana.")
+            return redirect("core:platnosci_lista")
+    else:
+        form = PlatnoscForm(instance=platnosc)
+
+    return render(
+        request,
+        "platnosci/formularz.html",
+        {
+            "form": form,
+            "tytul": "Edytuj płatność",
+        },
+    )
+
+
+@login_required
+def platnosc_usun(request, platnosc_id):
+    platnosc = get_object_or_404(Platnosc, id=platnosc_id)
+
+    if request.method == "POST":
+        platnosc.delete()
+        messages.success(request, "Płatność została usunięta.")
+        return redirect("core:platnosci_lista")
+
+    return render(
+        request,
+        "platnosci/usun.html",
+        {
+            "platnosc": platnosc,
         },
     )

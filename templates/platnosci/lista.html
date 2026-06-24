@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+    .page-container { max-width: 1150px; margin: 0 auto; padding: 20px; }
+    h1 { text-align: center; color: #2c3e50; margin-bottom: 20px; }
+    .top-bar { display: flex; justify-content: space-between; gap: 15px; margin-bottom: 20px; align-items: center; flex-wrap: wrap; }
+    .filter-form { display: flex; gap: 8px; flex-wrap: wrap; }
+    select { padding: 9px; border-radius: 5px; border: 1px solid #ccc; }
+    .btn { padding: 9px 14px; background: #2c3e50; color: white; text-decoration: none; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; }
+    .btn:hover { background: #1f2a38; }
+    .btn-danger { background: #c0392b; }
+    .btn-danger:hover { background: #922b21; }
+    .btn-secondary { background: #7f8c8d; }
+    .messages { margin-bottom: 15px; }
+    .message { background: #d4edda; color: #155724; padding: 12px; border-radius: 6px; text-align: center; font-weight: bold; }
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    thead { background: #2c3e50; color: white; }
+    th, td { padding: 12px 15px; border-bottom: 1px solid #eee; text-align: left; }
+    tbody tr:nth-child(even) { background: #f8f9fa; }
+    tbody tr:hover { background: #eef2f7; }
+    .actions { display: flex; gap: 8px; }
+    .status-paid { color: #166534; font-weight: bold; }
+    .status-unpaid { color: #991b1b; font-weight: bold; }
+    .status-cancelled { color: #6b7280; font-weight: bold; }
+</style>
+
+<div class="page-container">
+
+    <h1>Płatności</h1>
+
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="message">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="top-bar">
+        <a class="btn" href="{% url 'core:platnosc_dodaj' %}">
+            Dodaj płatność
+        </a>
+
+        <form method="get" class="filter-form">
+            <select name="status">
+                <option value="">Wszystkie statusy</option>
+                {% for wartosc, etykieta in statusy %}
+                    <option value="{{ wartosc }}" {% if status == wartosc %}selected{% endif %}>
+                        {{ etykieta }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <button type="submit" class="btn">Filtruj</button>
+
+            {% if status %}
+                <a href="{% url 'core:platnosci_lista' %}" class="btn btn-secondary">
+                    Wyczyść
+                </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Zamówienie</th>
+                <th>Klient</th>
+                <th>Kwota</th>
+                <th>Rabat</th>
+                <th>Do zapłaty</th>
+                <th>Status</th>
+                <th>Data utworzenia</th>
+                <th>Akcje</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for platnosc in platnosci %}
+                <tr>
+                    <td>#{{ platnosc.id }}</td>
+                    <td>#{{ platnosc.zamowienie.id }}</td>
+                    <td>
+                        {{ platnosc.zamowienie.klient.imie }}
+                        {{ platnosc.zamowienie.klient.nazwisko }}
+                    </td>
+                    <td>{{ platnosc.kwota }} zł</td>
+                    <td>{{ platnosc.rabat }} zł</td>
+                    <td>
+                        {{ platnosc.kwota|floatformat:2 }} zł
+                    </td>
+                    <td>
+                        {% if platnosc.status == "OPLACONA" %}
+                            <span class="status-paid">{{ platnosc.get_status_display }}</span>
+                        {% elif platnosc.status == "NIEOPLACONA" %}
+                            <span class="status-unpaid">{{ platnosc.get_status_display }}</span>
+                        {% else %}
+                            <span class="status-cancelled">{{ platnosc.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ platnosc.data_utworzenia|date:"d.m.Y H:i" }}</td>
+                    <td>
+                        <div class="actions">
+                            <a class="btn" href="{% url 'core:platnosc_edytuj' platnosc.id %}">
+                                Edytuj
+                            </a>
+
+                            <a class="btn btn-danger" href="{% url 'core:platnosc_usun' platnosc.id %}">
+                                Usuń
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="9" style="text-align:center;">
+                        Brak płatności do wyświetlenia.
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
+{% endblock %}

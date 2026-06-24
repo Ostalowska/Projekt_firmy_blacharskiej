@@ -9,6 +9,7 @@ from .models import (
     Magazyn,
     StanMagazynowy,
     ProcesMagazynowy,
+    Platnosc,
 )
 
 
@@ -264,3 +265,36 @@ class ProcesMagazynowyForm(forms.ModelForm):
             raise forms.ValidationError("Ilość musi być większa od zera.")
 
         return ilosc
+        
+class PlatnoscForm(forms.ModelForm):
+    class Meta:
+        model = Platnosc
+        fields = [
+            "zamowienie",
+            "kwota",
+            "rabat",
+            "status",
+        ]
+
+        labels = {
+            "zamowienie": "Zamówienie",
+            "kwota": "Kwota",
+            "rabat": "Rabat",
+            "status": "Status płatności",
+        }
+
+    def clean_kwota(self):
+        kwota = self.cleaned_data["kwota"]
+
+        if kwota < 0:
+            raise forms.ValidationError("Kwota nie może być ujemna.")
+
+        return kwota
+
+    def clean_rabat(self):
+        rabat = self.cleaned_data["rabat"]
+
+        if rabat < 0:
+            raise forms.ValidationError("Rabat nie może być ujemny.")
+
+        return rabat

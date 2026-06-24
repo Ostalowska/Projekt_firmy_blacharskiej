@@ -73,4 +73,9 @@ urlpatterns = [
     
     path("magazyn/", views.magazyn_lista, name="magazyn_lista"),
     path("magazyn/proces/dodaj/", views.proces_magazynowy_dodaj, name="proces_magazynowy_dodaj"),
+    
+    path("platnosci/", views.platnosci_lista, name="platnosci_lista"),
+    path("platnosci/dodaj/", views.platnosc_dodaj, name="platnosc_dodaj"),
+    path("platnosci/<int:platnosc_id>/edytuj/", views.platnosc_edytuj, name="platnosc_edytuj"),
+    path("platnosci/<int:platnosc_id>/usun/", views.platnosc_usun, name="platnosc_usun"),
 ]
