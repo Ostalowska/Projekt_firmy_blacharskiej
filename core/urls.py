@@ -84,4 +84,5 @@ urlpatterns = [
     path("pracownicy/<int:pracownik_id>/dezaktywuj/", views.pracownik_dezaktywuj, name="pracownik_dezaktywuj"),
     path("zamowienia/<int:zamowienie_id>/rabat/", views.zamowienie_ustaw_rabat, name="zamowienie_ustaw_rabat"),
     path("zamowienia/<int:zamowienie_id>/przyjmij/", views.zamowienie_przyjmij, name="zamowienie_przyjmij"),
+    path("pracownicy/<int:pracownik_id>/aktywuj/", views.pracownik_aktywuj, name="pracownik_aktywuj"),
 ]

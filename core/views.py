@@ -986,7 +986,6 @@ def pracownik_edytuj(request, pracownik_id):
             user.first_name = form.cleaned_data["imie"]
             user.last_name = form.cleaned_data["nazwisko"]
             user.email = form.cleaned_data["email"]
-            user.is_active = form.cleaned_data["aktywny"]
 
             if profil.rola == "ADMIN":
                 user.is_staff = True
@@ -1004,7 +1003,6 @@ def pracownik_edytuj(request, pracownik_id):
                 "imie": user.first_name,
                 "nazwisko": user.last_name,
                 "email": user.email,
-                "aktywny": user.is_active,
             },
         )
 
@@ -1017,7 +1015,19 @@ def pracownik_edytuj(request, pracownik_id):
         },
     )
 
+@login_required
+def pracownik_aktywuj(request, pracownik_id):
+    profil = get_object_or_404(PracownikProfil, id=pracownik_id)
 
+    if request.method == "POST":
+        profil.user.is_active = True
+        profil.user.save()
+
+        messages.success(request, "Pracownik został aktywowany.")
+        return redirect("core:pracownicy_lista")
+
+    return redirect("core:pracownicy_lista")
+    
 @login_required
 def pracownik_dezaktywuj(request, pracownik_id):
     profil = get_object_or_404(PracownikProfil, id=pracownik_id)
@@ -1029,10 +1039,4 @@ def pracownik_dezaktywuj(request, pracownik_id):
         messages.success(request, "Pracownik został dezaktywowany.")
         return redirect("core:pracownicy_lista")
 
-    return render(
-        request,
-        "pracownicy/dezaktywuj.html",
-        {
-            "pracownik": profil,
-        },
-    )
+    return redirect("core:pracownicy_lista")

@@ -359,7 +359,6 @@ class PracownikEditForm(forms.ModelForm):
     imie = forms.CharField(label="Imię", max_length=50)
     nazwisko = forms.CharField(label="Nazwisko", max_length=50)
     email = forms.EmailField(label="Email", required=False)
-    aktywny = forms.BooleanField(label="Aktywny", required=False)
 
     class Meta:
         model = PracownikProfil

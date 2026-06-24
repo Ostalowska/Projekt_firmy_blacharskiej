@@ -3,50 +3,156 @@
 {% block content %}
 
 <style>
-    .page-container { max-width: 700px; margin: 0 auto; padding: 20px; }
-    h1 { text-align: center; color: #2c3e50; }
-    .form-card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    form { display: flex; flex-direction: column; gap: 12px; }
+    .page-container { max-width: 850px; margin: 0 auto; padding: 20px; }
+    h1, h2 { text-align: center; color: #2c3e50; }
+
+    .form-card {
+        background: white;
+        padding: 25px;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+    }
+
+    .form-row {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .full { grid-column: 1 / -1; }
+
     label { font-weight: bold; color: #2c3e50; }
-    input, select { padding: 10px; border-radius: 6px; border: 1px solid #ccc; width: 100%; box-sizing: border-box; }
-    input[type="checkbox"] { width: auto; }
-    .errorlist { color: #c0392b; margin: 0; padding-left: 18px; font-size: 14px; }
-    .btn-row { display: flex; gap: 10px; margin-top: 10px; }
-    .btn { padding: 10px 15px; background: #2c3e50; color: white; border: none; border-radius: 5px; text-decoration: none; cursor: pointer; text-align: center; }
+
+    input, select {
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .errorlist {
+        color: #c0392b;
+        margin: 0;
+        padding-left: 18px;
+        font-size: 14px;
+    }
+
+    .btn-row {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-top: 20px;
+    }
+
+    .btn {
+        padding: 10px 15px;
+        background: #2c3e50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        text-decoration: none;
+        cursor: pointer;
+        text-align: center;
+    }
+
     .btn-secondary { background: #7f8c8d; }
+
+    @media (max-width: 800px) {
+        .form-grid { grid-template-columns: 1fr; }
+    }
 </style>
 
 <div class="page-container">
 
     <h1>{{ tytul }}</h1>
 
-    <div class="form-card">
-        <form method="post">
-            {% csrf_token %}
+    <form method="post">
+        {% csrf_token %}
 
-            {{ form.non_field_errors }}
+        {{ form.non_field_errors }}
 
-            {% for field in form %}
-                <div>
-                    <label for="{{ field.id_for_label }}">
-                        {{ field.label }}
-                    </label>
-                    {{ field }}
-                    {{ field.errors }}
-                </div>
-            {% endfor %}
+        <div class="form-card">
+            <h2>Dane logowania</h2>
 
-            <div class="btn-row">
-                <button type="submit" class="btn">
-                    Zapisz
-                </button>
+            <div class="form-grid">
+                {% if form.username %}
+                    <div class="form-row">
+                        <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+                        {{ form.username }}
+                        {{ form.username.errors }}
+                    </div>
+                {% endif %}
 
-                <a href="{% url 'core:pracownicy_lista' %}" class="btn btn-secondary">
-                    Anuluj
-                </a>
+                {% if form.haslo %}
+                    <div class="form-row">
+                        <label for="{{ form.haslo.id_for_label }}">{{ form.haslo.label }}</label>
+                        {{ form.haslo }}
+                        {{ form.haslo.errors }}
+                    </div>
+                {% endif %}
             </div>
-        </form>
-    </div>
+        </div>
+
+        <div class="form-card">
+            <h2>Dane pracownika</h2>
+
+            <div class="form-grid">
+                <div class="form-row">
+                    <label for="{{ form.imie.id_for_label }}">{{ form.imie.label }}</label>
+                    {{ form.imie }}
+                    {{ form.imie.errors }}
+                </div>
+
+                <div class="form-row">
+                    <label for="{{ form.nazwisko.id_for_label }}">{{ form.nazwisko.label }}</label>
+                    {{ form.nazwisko }}
+                    {{ form.nazwisko.errors }}
+                </div>
+
+                <div class="form-row">
+                    <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                    {{ form.email }}
+                    {{ form.email.errors }}
+                </div>
+
+                <div class="form-row">
+                    <label for="{{ form.telefon.id_for_label }}">{{ form.telefon.label }}</label>
+                    {{ form.telefon }}
+                    {{ form.telefon.errors }}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-card">
+            <h2>Uprawnienia</h2>
+
+            <div class="form-grid">
+                <div class="form-row full">
+                    <label for="{{ form.rola.id_for_label }}">{{ form.rola.label }}</label>
+                    {{ form.rola }}
+                    {{ form.rola.errors }}
+                </div>
+            </div>
+        </div>
+
+        <div class="btn-row">
+            <a href="{% url 'core:pracownicy_lista' %}" class="btn btn-secondary">
+                Anuluj
+            </a>
+
+            <button type="submit" class="btn">
+                Zapisz
+            </button>
+        </div>
+    </form>
 
 </div>
 
