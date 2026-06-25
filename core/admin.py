@@ -98,17 +98,25 @@ class ZamowienieAdmin(admin.ModelAdmin):
 @admin.register(PozycjaZamowienia)
 class PozycjaZamowieniaAdmin(admin.ModelAdmin):
     list_display = (
+        "id",
         "zamowienie",
-        "material",
-        "rozmiar",
-        "czy_niestandardowy",
+        "stan_magazynowy",
         "typ_uslugi",
         "ilosc",
         "cena_jednostkowa",
         "wartosc",
     )
-    list_filter = ("material", "typ_uslugi", "czy_niestandardowy")
-    search_fields = ("zamowienie__numer", "material__nazwa")
+
+    list_filter = (
+        "typ_uslugi",
+        "czy_niestandardowy",
+    )
+
+    search_fields = (
+        "zamowienie__numer",
+        "stan_magazynowy__material__nazwa",
+        "stan_magazynowy__magazyn__nazwa",
+    )
 
 
 @admin.register(Zadanie)

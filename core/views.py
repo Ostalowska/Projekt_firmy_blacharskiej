@@ -493,26 +493,37 @@ def zamowienia_lista(request):
 
 @login_required
 def zamowienie_dodaj(request):
-    materialy = Material.objects.all().order_by("nazwa")
-    rozmiary = RozmiarBlachy.objects.all().order_by("szerokosc_mm", "wysokosc_mm")
+    stany_magazynowe = (
+        StanMagazynowy.objects
+        .select_related("magazyn", "material", "rozmiar")
+        .filter(ilosc__gt=0)
+        .order_by(
+            "magazyn__nazwa",
+            "material__nazwa",
+            "material__grubosc_mm",
+            "rozmiar__szerokosc_mm",
+            "rozmiar__wysokosc_mm",
+        )
+    )
+
     typy_uslug = TypUslugi.objects.all().order_by("nazwa")
 
-    materialy_json = json.dumps([
+    stany_json = json.dumps([
         {
-            "id": material.id,
-            "nazwa": str(material),
-            "cena_za_m2": float(material.cena_za_m2),
+            "id": stan.id,
+            "magazyn": stan.magazyn.nazwa,
+            "material": str(stan.material),
+            "material_id": stan.material.id,
+            "rozmiar": str(stan.rozmiar) if stan.rozmiar else "",
+            "szerokosc": stan.rozmiar.szerokosc_mm if stan.rozmiar else 0,
+            "wysokosc": stan.rozmiar.wysokosc_mm if stan.rozmiar else 0,
+            "cena_za_m2": float(stan.material.cena_za_m2),
+            "ilosc": stan.ilosc,
+            "zarezerwowano": stan.zarezerwowano,
+            "dostepne": stan.dostepne,
         }
-        for material in materialy
-    ])
-
-    rozmiary_json = json.dumps([
-        {
-            "id": rozmiar.id,
-            "szerokosc": rozmiar.szerokosc_mm,
-            "wysokosc": rozmiar.wysokosc_mm,
-        }
-        for rozmiar in rozmiary
+        for stan in stany_magazynowe
+        if stan.dostepne > 0
     ])
 
     uslugi_json = json.dumps([
@@ -567,8 +578,7 @@ def zamowienie_dodaj(request):
             "zamowienie_form": zamowienie_form,
             "pozycje_formset": pozycje_formset,
             "tytul": "Nowe zamówienie",
-            "materialy_json": materialy_json,
-            "rozmiary_json": rozmiary_json,
+            "stany_json": stany_json,
             "uslugi_json": uslugi_json,
         },
     )
@@ -622,8 +632,10 @@ def zamowienie_szczegoly(request, zamowienie_id):
     )
 
     pozycje = zamowienie.pozycje.select_related(
-        "material",
-        "rozmiar",
+        "stan_magazynowy",
+        "stan_magazynowy__magazyn",
+        "stan_magazynowy__material",
+        "stan_magazynowy__rozmiar",
         "typ_uslugi",
     ).all()
 
@@ -658,7 +670,12 @@ def zamowienie_ustaw_rabat(request, zamowienie_id):
 @login_required
 def zamowienie_przyjmij(request, zamowienie_id):
     zamowienie = get_object_or_404(
-        Zamowienie.objects.prefetch_related("pozycje__material"),
+        Zamowienie.objects.prefetch_related(
+            "pozycje__stan_magazynowy",
+            "pozycje__stan_magazynowy__material",
+            "pozycje__stan_magazynowy__rozmiar",
+            "pozycje__stan_magazynowy__magazyn",
+        ),
         id=zamowienie_id,
     )
 
@@ -675,52 +692,40 @@ def zamowienie_przyjmij(request, zamowienie_id):
 
     try:
         with transaction.atomic():
-            for pozycja in zamowienie.pozycje.select_related("material").all():
-                material = pozycja.material
-                ilosc_do_rezerwacji = pozycja.ilosc
+            for pozycja in zamowienie.pozycje.select_related(
+                "stan_magazynowy",
+                "stan_magazynowy__material",
+                "stan_magazynowy__rozmiar",
+                "stan_magazynowy__magazyn",
+            ).all():
+                stan = pozycja.stan_magazynowy
 
-                stany = (
-                    StanMagazynowy.objects
-                    .select_for_update()
-                    .filter(material=material)
-                    .exclude(ilosc=0, zarezerwowano=0)
-                    .order_by("magazyn__nazwa")
-                )
+                if not stan:
+                    messages.error(request, "Jedna z pozycji nie ma wybranego arkusza magazynowego.")
+                    raise ValueError("Brak arkusza")
 
-                dostepne_lacznie = sum(stan.dostepne for stan in stany)
+                stan = StanMagazynowy.objects.select_for_update().get(id=stan.id)
 
-                if dostepne_lacznie < ilosc_do_rezerwacji:
+                if stan.dostepne < pozycja.ilosc:
                     messages.error(
                         request,
-                        f"Brak wystarczającej ilości materiału: {material}. "
-                        f"Potrzeba {ilosc_do_rezerwacji}, dostępne {dostepne_lacznie}."
+                        f"Brak wystarczającej ilości: {stan}. "
+                        f"Potrzeba {pozycja.ilosc}, dostępne {stan.dostepne}."
                     )
                     raise ValueError("Brak materiału")
 
-                pozostalo = ilosc_do_rezerwacji
+                stan.zarezerwowano += pozycja.ilosc
+                stan.save(update_fields=["zarezerwowano"])
 
-                for stan in stany:
-                    if pozostalo <= 0:
-                        break
-
-                    do_rezerwacji = min(stan.dostepne, pozostalo)
-
-                    if do_rezerwacji <= 0:
-                        continue
-
-                    stan.zarezerwowano += do_rezerwacji
-                    stan.save(update_fields=["zarezerwowano"])
-
-                    ProcesMagazynowy.objects.create(
-                        magazyn=stan.magazyn,
-                        material=material,
-                        pracownik=request.user,
-                        typ="REZERWACJA",
-                        ilosc=do_rezerwacji,
-                        opis=f"Rezerwacja do zamówienia {zamowienie.numer or zamowienie.id}",
-                    )
-
-                    pozostalo -= do_rezerwacji
+                ProcesMagazynowy.objects.create(
+                    magazyn=stan.magazyn,
+                    material=stan.material,
+                    rozmiar=stan.rozmiar,
+                    pracownik=request.user,
+                    typ="REZERWACJA",
+                    ilosc=pozycja.ilosc,
+                    opis=f"Rezerwacja do zamówienia {zamowienie.numer or zamowienie.id}",
+                )
 
             zamowienie.status = "ZATWIERDZONE"
             zamowienie.save(update_fields=["status"])
@@ -764,7 +769,16 @@ def pozycja_dodaj(request, zamowienie_id):
 
 @login_required
 def pozycja_edytuj(request, pozycja_id):
-    pozycja = get_object_or_404(PozycjaZamowienia, id=pozycja_id)
+    pozycja = get_object_or_404(
+        PozycjaZamowienia.objects.select_related(
+            "zamowienie",
+            "stan_magazynowy",
+            "stan_magazynowy__material",
+            "stan_magazynowy__rozmiar",
+        ),
+        id=pozycja_id,
+    )
+
     zamowienie = pozycja.zamowienie
 
     if request.method == "POST":

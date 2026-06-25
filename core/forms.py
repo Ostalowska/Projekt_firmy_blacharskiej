@@ -205,8 +205,7 @@ class PozycjaZamowieniaForm(forms.ModelForm):
     class Meta:
         model = PozycjaZamowienia
         fields = [
-            "material",
-            "rozmiar",
+            "stan_magazynowy",
             "czy_niestandardowy",
             "szerokosc_niestandardowa_mm",
             "wysokosc_niestandardowa_mm",
@@ -215,8 +214,7 @@ class PozycjaZamowieniaForm(forms.ModelForm):
         ]
 
         labels = {
-            "material": "Materiał",
-            "rozmiar": "Rozmiar standardowy",
+            "stan_magazynowy": "Arkusz z magazynu",
             "czy_niestandardowy": "Rozmiar niestandardowy",
             "szerokosc_niestandardowa_mm": "Szerokość niestandardowa (mm)",
             "wysokosc_niestandardowa_mm": "Wysokość niestandardowa (mm)",
@@ -224,21 +222,46 @@ class PozycjaZamowieniaForm(forms.ModelForm):
             "ilosc": "Ilość",
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields["stan_magazynowy"].queryset = (
+            StanMagazynowy.objects.filter(ilosc__gt=0)
+            .select_related(
+                "magazyn",
+                "material",
+                "rozmiar",
+            )
+            .order_by(
+                "material__nazwa",
+                "material__grubosc_mm",
+                "rozmiar__szerokosc_mm",
+                "rozmiar__wysokosc_mm",
+            )
+        )
+
     def clean_ilosc(self):
         ilosc = self.cleaned_data["ilosc"]
 
         if ilosc <= 0:
-            raise forms.ValidationError("Ilość musi być większa od zera.")
+            raise forms.ValidationError(
+                "Ilość musi być większa od zera."
+            )
 
         return ilosc
 
     def clean(self):
         cleaned_data = super().clean()
 
+        stan = cleaned_data.get("stan_magazynowy")
         czy_niestandardowy = cleaned_data.get("czy_niestandardowy")
-        rozmiar = cleaned_data.get("rozmiar")
         szerokosc = cleaned_data.get("szerokosc_niestandardowa_mm")
         wysokosc = cleaned_data.get("wysokosc_niestandardowa_mm")
+
+        if not stan:
+            raise forms.ValidationError(
+                "Wybierz arkusz z magazynu."
+            )
 
         if czy_niestandardowy:
             if not szerokosc or not wysokosc:
@@ -251,19 +274,13 @@ class PozycjaZamowieniaForm(forms.ModelForm):
                     "Wymiary niestandardowe muszą być większe od zera."
                 )
 
-        else:
-            if not rozmiar:
-                raise forms.ValidationError(
-                    "Wybierz rozmiar standardowy albo zaznacz rozmiar niestandardowy."
-                )
-
         return cleaned_data
 
 
 PozycjaZamowieniaFormSet = formset_factory(
     PozycjaZamowieniaForm,
     extra=1,
-    can_delete=True
+    can_delete=True,
 )
 
 

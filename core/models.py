@@ -197,15 +197,6 @@ class PozycjaZamowienia(models.Model):
         blank=True,
     )
 
-    material = models.ForeignKey(Material, on_delete=models.CASCADE)
-
-    rozmiar = models.ForeignKey(
-        RozmiarBlachy,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-    )
-
     czy_niestandardowy = models.BooleanField(default=False)
 
     szerokosc_niestandardowa_mm = models.PositiveIntegerField(
@@ -243,9 +234,9 @@ class PozycjaZamowienia(models.Model):
         if self.czy_niestandardowy:
             szer = self.szerokosc_niestandardowa_mm or 0
             wys = self.wysokosc_niestandardowa_mm or 0
-        elif self.rozmiar:
-            szer = self.rozmiar.szerokosc_mm
-            wys = self.rozmiar.wysokosc_mm
+        elif self.stan_magazynowy and self.stan_magazynowy.rozmiar:
+            szer = self.stan_magazynowy.rozmiar.szerokosc_mm
+            wys = self.stan_magazynowy.rozmiar.wysokosc_mm
         else:
             szer = 0
             wys = 0
@@ -254,7 +245,10 @@ class PozycjaZamowienia(models.Model):
 
     def przelicz_cene(self):
         powierzchnia = self.powierzchnia_m2()
-        cena_materialu = powierzchnia * self.material.cena_za_m2
+
+        cena_materialu = Decimal("0.00")
+        if self.stan_magazynowy:
+            cena_materialu = powierzchnia * self.stan_magazynowy.material.cena_za_m2
 
         cena_uslugi = Decimal("0.00")
         if self.typ_uslugi:
@@ -280,7 +274,10 @@ class PozycjaZamowienia(models.Model):
         zamowienie.przelicz_kwote()
 
     def __str__(self):
-        return f"{self.material} x {self.ilosc}"
+        if self.stan_magazynowy:
+            return f"{self.stan_magazynowy.material} x {self.ilosc}"
+
+        return f"Pozycja x {self.ilosc}"
 
 
 class Zadanie(models.Model):
