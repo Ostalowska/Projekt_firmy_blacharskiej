@@ -765,6 +765,9 @@ def magazyn_lista(request):
     stany = StanMagazynowy.objects.select_related(
         "magazyn",
         "material",
+    ).exclude(
+        ilosc=0,
+        zarezerwowano=0,
     ).order_by("magazyn__nazwa", "material__nazwa")
 
     return render(

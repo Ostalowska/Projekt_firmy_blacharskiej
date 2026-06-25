@@ -145,18 +145,7 @@
             <tbody>
                 {% for stan in stany %}
                     <tr>
-                        <td>
-							{{ stan.magazyn.nazwa }}
-
-							{% if czy_admin %}
-								<br>
-
-								<a class="btn btn-secondary"
-								   href="{% url 'core:magazyn_edytuj' stan.magazyn.id %}">
-									Edytuj
-								</a>
-							{% endif %}
-						</td>
+                        <td>{{ stan.magazyn.nazwa }}</td>
                         <td>{{ stan.material.nazwa }}</td>
                         <td>{{ stan.material.grubosc_mm }} mm</td>
                         <td class="quantity">{{ stan.ilosc }}</td>

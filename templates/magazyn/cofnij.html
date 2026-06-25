@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+    .page-container {
+        max-width: 700px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    h1 {
+        text-align: center;
+        color: #c0392b;
+    }
+
+    .card {
+        background: white;
+        padding: 25px;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+
+    .warning {
+        background: #f8d7da;
+        color: #721c24;
+        padding: 12px;
+        border-radius: 6px;
+        text-align: center;
+        font-weight: bold;
+        margin-bottom: 15px;
+    }
+
+    .details p {
+        margin: 8px 0;
+    }
+
+    form {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    label {
+        font-weight: bold;
+        color: #2c3e50;
+    }
+
+    textarea {
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .errorlist {
+        color: #c0392b;
+        margin: 0;
+        padding-left: 18px;
+        font-size: 14px;
+    }
+
+    .btn-row {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-top: 10px;
+    }
+
+    .btn {
+        padding: 10px 15px;
+        background: #2c3e50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        text-decoration: none;
+        cursor: pointer;
+        text-align: center;
+    }
+
+    .btn-danger {
+        background: #c0392b;
+    }
+
+    .btn-secondary {
+        background: #7f8c8d;
+    }
+</style>
+
+<div class="page-container">
+
+    <h1>Cofnij operację magazynową</h1>
+
+    <div class="warning">
+        Cofnięcie operacji zmieni stan magazynowy i zostanie zapisane w historii.
+    </div>
+
+    <div class="card details">
+        <p><strong>Data:</strong> {{ proces.data|date:"d.m.Y H:i" }}</p>
+        <p><strong>Typ:</strong> {{ proces.get_typ_display }}</p>
+        <p><strong>Magazyn:</strong> {{ proces.magazyn.nazwa }}</p>
+        <p><strong>Materiał:</strong> {{ proces.material.nazwa }} {{ proces.material.grubosc_mm }} mm</p>
+        <p><strong>Ilość:</strong> {{ proces.ilosc }}</p>
+        <p>
+            <strong>Pracownik:</strong>
+            {% if proces.pracownik %}
+                {{ proces.pracownik.username }}
+            {% else %}
+                -
+            {% endif %}
+        </p>
+        <p><strong>Opis:</strong> {{ proces.opis|default:"-" }}</p>
+    </div>
+
+    <div class="card">
+        <form method="post">
+            {% csrf_token %}
+
+            {{ form.non_field_errors }}
+
+            {% for field in form %}
+                <div>
+                    <label for="{{ field.id_for_label }}">
+                        {{ field.label }}
+                    </label>
+
+                    {{ field }}
+                    {{ field.errors }}
+                </div>
+            {% endfor %}
+
+            <div class="btn-row">
+                <a href="{% url 'core:historia_magazynu' %}" class="btn btn-secondary">
+                    Anuluj
+                </a>
+
+                <button type="submit" class="btn btn-danger">
+                    Cofnij operację
+                </button>
+            </div>
+        </form>
+    </div>
+
+</div>
+
+{% endblock %}

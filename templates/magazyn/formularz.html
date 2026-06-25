@@ -3,17 +3,63 @@
 {% block content %}
 
 <style>
-    .page-container { max-width: 700px; margin: 0 auto; padding: 20px; }
+    .page-container { max-width: 750px; margin: 0 auto; padding: 20px; }
     h1 { text-align: center; color: #2c3e50; }
-    .info { background: #dbeafe; color: #1e40af; padding: 12px; border-radius: 6px; margin-bottom: 15px; text-align: center; }
-    .form-card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+
+    .info {
+        background: #dbeafe;
+        color: #1e40af;
+        padding: 12px;
+        border-radius: 6px;
+        margin-bottom: 15px;
+        text-align: center;
+    }
+
+    .form-card {
+        background: white;
+        padding: 25px;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
     form { display: flex; flex-direction: column; gap: 12px; }
     label { font-weight: bold; color: #2c3e50; }
-    input, select, textarea { padding: 10px; border-radius: 6px; border: 1px solid #ccc; width: 100%; box-sizing: border-box; }
-    .errorlist { color: #c0392b; margin: 0; padding-left: 18px; font-size: 14px; }
-    .btn-row { display: flex; gap: 10px; margin-top: 10px; }
-    .btn { padding: 10px 15px; background: #2c3e50; color: white; border: none; border-radius: 5px; text-decoration: none; cursor: pointer; text-align: center; }
+
+    input, select, textarea {
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .errorlist {
+        color: #c0392b;
+        margin: 0;
+        padding-left: 18px;
+        font-size: 14px;
+    }
+
+    .btn-row {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+        justify-content: flex-end;
+    }
+
+    .btn {
+        padding: 10px 15px;
+        background: #2c3e50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        text-decoration: none;
+        cursor: pointer;
+        text-align: center;
+    }
+
     .btn-secondary { background: #7f8c8d; }
+    .btn-success { background: #166534; }
 </style>
 
 <div class="page-container">
@@ -21,7 +67,8 @@
     <h1>{{ tytul }}</h1>
 
     <div class="info">
-        Przyjęcie zwiększa stan magazynowy, wydanie zmniejsza stan, a inwentaryzacja ustawia nową ilość.
+        Przyjęcie zwiększa stan magazynowy, a wydanie zmniejsza stan dostępny.
+        Inwentaryzację wykonujemy z poziomu konkretnego rekordu stanu magazynowego.
     </div>
 
     <div class="form-card">
@@ -35,19 +82,20 @@
                     <label for="{{ field.id_for_label }}">
                         {{ field.label }}
                     </label>
+
                     {{ field }}
                     {{ field.errors }}
                 </div>
             {% endfor %}
 
             <div class="btn-row">
-                <button type="submit" class="btn">
-                    Zapisz operację
-                </button>
-
                 <a href="{% url 'core:magazyn_lista' %}" class="btn btn-secondary">
                     Anuluj
                 </a>
+
+                <button type="submit" class="btn btn-success">
+                    Zapisz czynność
+                </button>
             </div>
         </form>
     </div>
