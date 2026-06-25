@@ -14,6 +14,7 @@ from .models import (
     ProcesMagazynowy,
     Platnosc,
     PracownikProfil,
+    Cennik,
 )
 
 
@@ -137,6 +138,13 @@ class RozmiarBlachyForm(forms.ModelForm):
         return wysokosc
 
 class TypUslugiForm(forms.ModelForm):
+    cena = forms.DecimalField(
+        label="Cena usługi",
+        max_digits=10,
+        decimal_places=2,
+        min_value=0,
+    )
+
     class Meta:
         model = TypUslugi
         fields = [
@@ -150,6 +158,19 @@ class TypUslugiForm(forms.ModelForm):
         widgets = {
             "nazwa": forms.TextInput(attrs={"placeholder": "Np. Cięcie"}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.instance and self.instance.pk:
+            ostatnia_cena = (
+                Cennik.objects.filter(typ_uslugi=self.instance)
+                .order_by("-data_od")
+                .first()
+            )
+
+            if ostatnia_cena:
+                self.fields["cena"].initial = ostatnia_cena.cena
 
     def clean_nazwa(self):
         nazwa = self.cleaned_data["nazwa"]

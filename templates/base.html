@@ -99,11 +99,9 @@
             </a>
 
             {% if czy_admin %}
-                <a href="{% url 'core:klienci_lista' %}">Klienci</a>
+				<a href="{% url 'core:klienci_lista' %}">Klienci</a>
 				<a href="{% url 'core:pracownicy_lista' %}">Pracownicy</a>
-				<a href="{% url 'core:materialy_lista' %}">Materiały</a>
-				<a href="{% url 'core:rozmiary_lista' %}">Rozmiary blach</a>
-				<a href="{% url 'core:typy_uslug_lista' %}">Typy usług</a>
+				<a href="{% url 'core:edycja_uslug' %}">Edycja usług</a>
 				<a href="{% url 'core:magazyn_lista' %}">Magazyn</a>
 				<a href="{% url 'core:zamowienia_lista' %}">Zamówienia</a>
 				<a href="{% url 'core:moje_prace' %}">Moje Zadania</a>

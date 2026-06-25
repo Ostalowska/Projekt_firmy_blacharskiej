@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.models import User
+from django.utils import timezone
 import json
 
 from .forms import (
@@ -176,7 +177,7 @@ def material_dodaj(request):
                 "Materiał został dodany."
             )
 
-            return redirect("core:materialy_lista")
+            return redirect("core:edycja_uslug")
 
     else:
         form = MaterialForm()
@@ -213,7 +214,7 @@ def material_edytuj(request, material_id):
                 "Materiał został zaktualizowany."
             )
 
-            return redirect("core:materialy_lista")
+            return redirect("core:edycja_uslug")
 
     else:
         form = MaterialForm(
@@ -247,7 +248,7 @@ def material_usun(request, material_id):
             "Materiał został usunięty."
         )
 
-        return redirect("core:materialy_lista")
+        return redirect("core:edycja_uslug")
 
     return render(
         request,
@@ -284,7 +285,7 @@ def rozmiar_dodaj(request):
         if form.is_valid():
             form.save()
             messages.success(request, "Rozmiar blachy został dodany.")
-            return redirect("core:rozmiary_lista")
+            return redirect("core:edycja_uslug")
     else:
         form = RozmiarBlachyForm()
 
@@ -308,7 +309,7 @@ def rozmiar_edytuj(request, rozmiar_id):
         if form.is_valid():
             form.save()
             messages.success(request, "Rozmiar blachy został zaktualizowany.")
-            return redirect("core:rozmiary_lista")
+            return redirect("core:edycja_uslug")
     else:
         form = RozmiarBlachyForm(instance=rozmiar)
 
@@ -328,7 +329,7 @@ def rozmiar_usun(request, rozmiar_id):
     if request.method == "POST":
         rozmiar.delete()
         messages.success(request, "Rozmiar blachy został usunięty.")
-        return redirect("core:rozmiary_lista")
+        return redirect("core:edycja_uslug")
 
     return render(
         request,
@@ -342,6 +343,15 @@ def typy_uslug_lista(request):
     query = request.GET.get("q", "")
 
     typy_uslug = TypUslugi.objects.all().order_by("nazwa")
+
+    ceny_uslug = {}
+    for typ in typy_uslug:
+        ostatnia_cena = (
+            Cennik.objects.filter(typ_uslugi=typ)
+            .order_by("-data_od")
+            .first()
+        )
+        ceny_uslug[typ.id] = ostatnia_cena.cena if ostatnia_cena else None
 
     if query:
         typy_uslug = typy_uslug.filter(nazwa__icontains=query)
@@ -362,9 +372,16 @@ def typ_uslugi_dodaj(request):
         form = TypUslugiForm(request.POST)
 
         if form.is_valid():
-            form.save()
+            typ_uslugi = form.save()
+
+            Cennik.objects.create(
+                typ_uslugi=typ_uslugi,
+                cena=form.cleaned_data["cena"],
+                data_od=timezone.now().date(),
+            )
+
             messages.success(request, "Typ usługi został dodany.")
-            return redirect("core:typy_uslug_lista")
+            return redirect("core:edycja_uslug")
     else:
         form = TypUslugiForm()
 
@@ -386,9 +403,25 @@ def typ_uslugi_edytuj(request, typ_id):
         form = TypUslugiForm(request.POST, instance=typ_uslugi)
 
         if form.is_valid():
-            form.save()
+            typ_uslugi = form.save()
+
+            ostatnia_cena = (
+                Cennik.objects.filter(typ_uslugi=typ_uslugi)
+                .order_by("-data_od")
+                .first()
+            )
+
+            nowa_cena = form.cleaned_data["cena"]
+
+            if not ostatnia_cena or ostatnia_cena.cena != nowa_cena:
+                Cennik.objects.create(
+                    typ_uslugi=typ_uslugi,
+                    cena=nowa_cena,
+                    data_od=timezone.now().date(),
+                )
+
             messages.success(request, "Typ usługi został zaktualizowany.")
-            return redirect("core:typy_uslug_lista")
+            return redirect("core:edycja_uslug")
     else:
         form = TypUslugiForm(instance=typ_uslugi)
 
@@ -409,7 +442,7 @@ def typ_uslugi_usun(request, typ_id):
     if request.method == "POST":
         typ_uslugi.delete()
         messages.success(request, "Typ usługi został usunięty.")
-        return redirect("core:typy_uslug_lista")
+        return redirect("core:edycja_uslug")
 
     return render(
         request,
@@ -1040,3 +1073,33 @@ def pracownik_dezaktywuj(request, pracownik_id):
         return redirect("core:pracownicy_lista")
 
     return redirect("core:pracownicy_lista")
+
+@login_required
+def edycja_uslug(request):
+    materialy = Material.objects.all().order_by("nazwa")
+    rozmiary = RozmiarBlachy.objects.all().order_by("szerokosc_mm", "wysokosc_mm")
+    typy_uslug = TypUslugi.objects.all().order_by("nazwa")
+
+    uslugi_z_cenami = []
+
+    for usluga in typy_uslug:
+        ostatnia_cena = (
+            Cennik.objects.filter(typ_uslugi=usluga)
+            .order_by("-data_od")
+            .first()
+        )
+
+        uslugi_z_cenami.append({
+            "usluga": usluga,
+            "cena": ostatnia_cena.cena if ostatnia_cena else None,
+        })
+
+    return render(
+        request,
+        "edycja_uslug/panel.html",
+        {
+            "materialy": materialy,
+            "rozmiary": rozmiary,
+            "uslugi_z_cenami": uslugi_z_cenami,
+        },
+    )
