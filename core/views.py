@@ -18,6 +18,9 @@ from .forms import (
     PracownikEditForm,
     PozycjaZamowieniaFormSet,
     RabatForm,
+    MagazynForm,
+    InwentaryzacjaForm,
+    CofniecieOperacjiForm,
 )
 
 from .models import (
@@ -762,20 +765,13 @@ def magazyn_lista(request):
     stany = StanMagazynowy.objects.select_related(
         "magazyn",
         "material",
-    ).order_by("material__nazwa")
-
-    procesy = ProcesMagazynowy.objects.select_related(
-        "magazyn",
-        "material",
-        "pracownik",
-    ).order_by("-data")[:20]
+    ).order_by("magazyn__nazwa", "material__nazwa")
 
     return render(
         request,
         "magazyn/lista.html",
         {
             "stany": stany,
-            "procesy": procesy,
         },
     )
 
@@ -789,58 +785,30 @@ def proces_magazynowy_dodaj(request):
             proces = form.save(commit=False)
             proces.pracownik = request.user
 
-            magazyn = proces.magazyn
-            material = proces.material
-            ilosc = proces.ilosc
-
             stan, created = StanMagazynowy.objects.get_or_create(
-                magazyn=magazyn,
-                material=material,
-                defaults={"ilosc": 0},
+                magazyn=proces.magazyn,
+                material=proces.material,
+                defaults={"ilosc": 0, "zarezerwowano": 0},
             )
 
             if proces.typ == "PRZYJECIE":
-                stan.ilosc += ilosc
-                stan.save()
-                proces.save()
+                stan.ilosc += proces.ilosc
 
-                messages.success(
-                    request,
-                    "Materiał został przyjęty na magazyn.",
-                )
-
-                return redirect("core:magazyn_lista")
-
-            if proces.typ == "WYDANIE":
-                if stan.ilosc < ilosc:
+            elif proces.typ == "WYDANIE":
+                if stan.dostepne < proces.ilosc:
                     messages.error(
                         request,
-                        "Nie można wydać więcej materiału niż jest na stanie.",
+                        "Nie można wydać więcej materiału niż jest dostępne na magazynie.",
                     )
                     return redirect("core:proces_magazynowy_dodaj")
 
-                stan.ilosc -= ilosc
-                stan.save()
-                proces.save()
+                stan.ilosc -= proces.ilosc
 
-                messages.success(
-                    request,
-                    "Materiał został wydany z magazynu.",
-                )
+            stan.save()
+            proces.save()
 
-                return redirect("core:magazyn_lista")
-
-            if proces.typ == "INWENTARYZACJA":
-                stan.ilosc = ilosc
-                stan.save()
-                proces.save()
-
-                messages.success(
-                    request,
-                    "Stan magazynowy został zaktualizowany przez inwentaryzację.",
-                )
-
-                return redirect("core:magazyn_lista")
+            messages.success(request, "Czynność magazynowa została zapisana.")
+            return redirect("core:magazyn_lista")
 
     else:
         form = ProcesMagazynowyForm()
@@ -850,9 +818,343 @@ def proces_magazynowy_dodaj(request):
         "magazyn/formularz.html",
         {
             "form": form,
-            "tytul": "Dodaj proces magazynowy",
+            "tytul": "Wykonaj czynność na magazynie",
         },
     )
+    
+@login_required
+def magazyn_dodaj(request):
+
+    if not (request.user.is_superuser or request.user.pracownikprofil.rola == "ADMIN"):
+        messages.error(request, "Brak uprawnień.")
+        return redirect("core:magazyn_lista")
+
+    if request.method == "POST":
+        form = MagazynForm(request.POST)
+
+        if form.is_valid():
+            form.save()
+
+            messages.success(request, "Magazyn został dodany.")
+
+            return redirect("core:magazyn_lista")
+
+    else:
+        form = MagazynForm()
+
+    return render(
+        request,
+        "magazyn/magazyn_formularz.html",
+        {
+            "form": form,
+            "tytul": "Dodaj magazyn",
+        },
+    )
+
+@login_required
+def historia_magazynu(request):
+    procesy = ProcesMagazynowy.objects.select_related(
+        "magazyn",
+        "material",
+        "pracownik",
+        "cofnieta_przez",
+    ).order_by("-data")
+
+    return render(
+        request,
+        "magazyn/historia.html",
+        {
+            "procesy": procesy,
+        },
+    )
+
+
+@login_required
+def inwentaryzacja_magazynu(request, stan_id):
+    stan = get_object_or_404(
+        StanMagazynowy.objects.select_related("magazyn", "material"),
+        id=stan_id,
+    )
+
+    if request.method == "POST":
+        form = InwentaryzacjaForm(request.POST)
+
+        if form.is_valid():
+            nowa_ilosc = form.cleaned_data["ilosc"]
+            roznica = nowa_ilosc - stan.ilosc
+
+            stan.ilosc = nowa_ilosc
+            stan.save()
+
+            ProcesMagazynowy.objects.create(
+                magazyn=stan.magazyn,
+                material=stan.material,
+                pracownik=request.user,
+                typ="INWENTARYZACJA",
+                ilosc=roznica,
+                opis=form.cleaned_data["opis"],
+            )
+
+            messages.success(request, "Inwentaryzacja została zapisana.")
+            return redirect("core:magazyn_lista")
+    else:
+        form = InwentaryzacjaForm(initial={"ilosc": stan.ilosc})
+
+    return render(
+        request,
+        "magazyn/inwentaryzacja.html",
+        {
+            "form": form,
+            "stan": stan,
+            "tytul": "Inwentaryzacja",
+        },
+    )
+
+
+@login_required
+def cofnij_operacje_magazynowa(request, proces_id):
+    proces = get_object_or_404(
+        ProcesMagazynowy.objects.select_related("magazyn", "material"),
+        id=proces_id,
+    )
+
+    if proces.cofnieta:
+        messages.error(request, "Ta operacja została już cofnięta.")
+        return redirect("core:historia_magazynu")
+
+    if proces.typ == "COFNIECIE":
+        messages.error(request, "Nie można cofnąć operacji cofnięcia.")
+        return redirect("core:historia_magazynu")
+
+    if request.method == "POST":
+        form = CofniecieOperacjiForm(request.POST)
+
+        if form.is_valid():
+            stan, created = StanMagazynowy.objects.get_or_create(
+                magazyn=proces.magazyn,
+                material=proces.material,
+                defaults={"ilosc": 0, "zarezerwowano": 0},
+            )
+
+            if proces.typ == "PRZYJECIE":
+                if stan.ilosc < proces.ilosc:
+                    messages.error(
+                        request,
+                        "Nie można cofnąć przyjęcia, bo stan magazynowy jest za niski.",
+                    )
+                    return redirect("core:historia_magazynu")
+
+                stan.ilosc -= proces.ilosc
+
+            elif proces.typ == "WYDANIE":
+                stan.ilosc += proces.ilosc
+
+            elif proces.typ == "INWENTARYZACJA":
+                stan.ilosc -= proces.ilosc
+
+            stan.save()
+
+            proces.cofnieta = True
+            proces.powod_cofniecia = form.cleaned_data["powod"]
+            proces.cofnieta_przez = request.user
+            proces.data_cofniecia = timezone.now()
+            proces.save()
+
+            ProcesMagazynowy.objects.create(
+                magazyn=proces.magazyn,
+                material=proces.material,
+                pracownik=request.user,
+                typ="COFNIECIE",
+                ilosc=proces.ilosc,
+                opis=form.cleaned_data["powod"],
+                operacja_powiazana=proces,
+            )
+
+            messages.success(request, "Operacja została cofnięta.")
+            return redirect("core:historia_magazynu")
+    else:
+        form = CofniecieOperacjiForm()
+
+    return render(
+        request,
+        "magazyn/cofnij.html",
+        {
+            "form": form,
+            "proces": proces,
+        },
+    )
+
+
+@login_required
+def historia_magazynu(request):
+    procesy = ProcesMagazynowy.objects.select_related(
+        "magazyn",
+        "material",
+        "pracownik",
+        "cofnieta_przez",
+    ).order_by("-data")
+
+    return render(
+        request,
+        "magazyn/historia.html",
+        {
+            "procesy": procesy,
+        },
+    )
+
+
+@login_required
+def inwentaryzacja_magazynu(request, stan_id):
+    stan = get_object_or_404(
+        StanMagazynowy.objects.select_related("magazyn", "material"),
+        id=stan_id,
+    )
+
+    if request.method == "POST":
+        form = InwentaryzacjaForm(request.POST)
+
+        if form.is_valid():
+            nowa_ilosc = form.cleaned_data["ilosc"]
+            roznica = nowa_ilosc - stan.ilosc
+
+            stan.ilosc = nowa_ilosc
+            stan.save()
+
+            ProcesMagazynowy.objects.create(
+                magazyn=stan.magazyn,
+                material=stan.material,
+                pracownik=request.user,
+                typ="INWENTARYZACJA",
+                ilosc=roznica,
+                opis=form.cleaned_data["opis"],
+            )
+
+            messages.success(request, "Inwentaryzacja została zapisana.")
+            return redirect("core:magazyn_lista")
+    else:
+        form = InwentaryzacjaForm(initial={"ilosc": stan.ilosc})
+
+    return render(
+        request,
+        "magazyn/inwentaryzacja.html",
+        {
+            "form": form,
+            "stan": stan,
+            "tytul": "Inwentaryzacja",
+        },
+    )
+
+
+@login_required
+def cofnij_operacje_magazynowa(request, proces_id):
+    proces = get_object_or_404(
+        ProcesMagazynowy.objects.select_related("magazyn", "material"),
+        id=proces_id,
+    )
+
+    if proces.cofnieta:
+        messages.error(request, "Ta operacja została już cofnięta.")
+        return redirect("core:historia_magazynu")
+
+    if proces.typ == "COFNIECIE":
+        messages.error(request, "Nie można cofnąć operacji cofnięcia.")
+        return redirect("core:historia_magazynu")
+
+    if request.method == "POST":
+        form = CofniecieOperacjiForm(request.POST)
+
+        if form.is_valid():
+            stan, created = StanMagazynowy.objects.get_or_create(
+                magazyn=proces.magazyn,
+                material=proces.material,
+                defaults={"ilosc": 0, "zarezerwowano": 0},
+            )
+
+            if proces.typ == "PRZYJECIE":
+                if stan.ilosc < proces.ilosc:
+                    messages.error(
+                        request,
+                        "Nie można cofnąć przyjęcia, bo stan magazynowy jest za niski.",
+                    )
+                    return redirect("core:historia_magazynu")
+
+                stan.ilosc -= proces.ilosc
+
+            elif proces.typ == "WYDANIE":
+                stan.ilosc += proces.ilosc
+
+            elif proces.typ == "INWENTARYZACJA":
+                stan.ilosc -= proces.ilosc
+
+            stan.save()
+
+            proces.cofnieta = True
+            proces.powod_cofniecia = form.cleaned_data["powod"]
+            proces.cofnieta_przez = request.user
+            proces.data_cofniecia = timezone.now()
+            proces.save()
+
+            ProcesMagazynowy.objects.create(
+                magazyn=proces.magazyn,
+                material=proces.material,
+                pracownik=request.user,
+                typ="COFNIECIE",
+                ilosc=proces.ilosc,
+                opis=form.cleaned_data["powod"],
+                operacja_powiazana=proces,
+            )
+
+            messages.success(request, "Operacja została cofnięta.")
+            return redirect("core:historia_magazynu")
+    else:
+        form = CofniecieOperacjiForm()
+
+    return render(
+        request,
+        "magazyn/cofnij.html",
+        {
+            "form": form,
+            "proces": proces,
+        },
+    )
+ 
+@login_required
+def magazyn_edytuj(request, magazyn_id):
+
+    magazyn = get_object_or_404(
+        Magazyn,
+        id=magazyn_id,
+    )
+
+    if not (request.user.is_superuser or request.user.pracownikprofil.rola == "ADMIN"):
+        messages.error(request, "Brak uprawnień.")
+        return redirect("core:magazyn_lista")
+
+    if request.method == "POST":
+        form = MagazynForm(
+            request.POST,
+            instance=magazyn,
+        )
+
+        if form.is_valid():
+            form.save()
+
+            messages.success(request, "Magazyn został zaktualizowany.")
+
+            return redirect("core:magazyn_lista")
+
+    else:
+        form = MagazynForm(instance=magazyn)
+
+    return render(
+        request,
+        "magazyn/magazyn_formularz.html",
+        {
+            "form": form,
+            "tytul": "Edytuj magazyn",
+        },
+    )
+ 
 @login_required
 def platnosci_lista(request):
     status = request.GET.get("status", "")

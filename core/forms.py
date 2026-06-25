@@ -313,6 +313,14 @@ class ProcesMagazynowyForm(forms.ModelForm):
             }),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields["typ"].choices = [
+            ("PRZYJECIE", "Przyjęcie materiału"),
+            ("WYDANIE", "Wydanie materiału"),
+        ]
+
     def clean_ilosc(self):
         ilosc = self.cleaned_data["ilosc"]
 
@@ -321,6 +329,36 @@ class ProcesMagazynowyForm(forms.ModelForm):
 
         return ilosc
         
+class MagazynForm(forms.ModelForm):
+    class Meta:
+        model = Magazyn
+
+        fields = [
+            "nazwa",
+            "adres",
+        ]
+
+        labels = {
+            "nazwa": "Nazwa magazynu",
+            "adres": "Adres",
+        }
+
+
+class InwentaryzacjaForm(forms.Form):
+    ilosc = forms.IntegerField(label="Ilość po inwentaryzacji", min_value=0)
+    opis = forms.CharField(
+        label="Opis",
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
+
+
+class CofniecieOperacjiForm(forms.Form):
+    powod = forms.CharField(
+        label="Powód cofnięcia",
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
+    
 class PlatnoscForm(forms.ModelForm):
     class Meta:
         model = Platnosc
