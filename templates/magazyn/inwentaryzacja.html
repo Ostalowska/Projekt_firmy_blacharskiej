@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+.page-container{
+    max-width:700px;
+    margin:auto;
+    padding:20px;
+}
+
+.card{
+    background:white;
+    border-radius:10px;
+    padding:25px;
+    box-shadow:0 4px 12px rgba(0,0,0,.1);
+}
+
+h1{
+    text-align:center;
+    color:#2c3e50;
+    margin-bottom:25px;
+}
+
+.info{
+    background:#eef2f7;
+    padding:15px;
+    border-radius:8px;
+    margin-bottom:20px;
+    line-height:1.8;
+}
+
+form{
+    display:flex;
+    flex-direction:column;
+    gap:15px;
+}
+
+label{
+    font-weight:bold;
+}
+
+input,
+textarea{
+    width:100%;
+    padding:10px;
+    border:1px solid #ccc;
+    border-radius:6px;
+    box-sizing:border-box;
+}
+
+.btn-row{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    margin-top:10px;
+}
+
+.btn{
+    padding:10px 15px;
+    border:none;
+    border-radius:6px;
+    background:#2c3e50;
+    color:white;
+    text-decoration:none;
+    cursor:pointer;
+}
+
+.btn:hover{
+    background:#1f2a38;
+}
+
+.btn-secondary{
+    background:#7f8c8d;
+}
+
+.errorlist{
+    color:#c0392b;
+}
+</style>
+
+<div class="page-container">
+
+<div class="card">
+
+<h1>Inwentaryzacja magazynu</h1>
+
+<div class="info">
+
+<b>Magazyn:</b> {{ stan.magazyn.nazwa }}<br>
+
+<b>Materiał:</b>
+{{ stan.material.nazwa }}
+{{ stan.material.grubosc_mm }} mm<br>
+
+<b>Obecny stan:</b> {{ stan.ilosc }} szt.<br>
+
+<b>Zarezerwowano:</b> {{ stan.zarezerwowano }} szt.<br>
+
+<b>Dostępne:</b> {{ stan.dostepne }} szt.
+
+</div>
+
+<form method="post">
+
+{% csrf_token %}
+
+{{ form.non_field_errors }}
+
+{% for field in form %}
+
+<div>
+
+<label>{{ field.label }}</label>
+
+{{ field }}
+
+{{ field.errors }}
+
+</div>
+
+{% endfor %}
+
+<div class="btn-row">
+
+<a
+class="btn btn-secondary"
+href="{% url 'core:magazyn_lista' %}">
+Anuluj
+</a>
+
+<button
+class="btn"
+type="submit">
+Zapisz inwentaryzację
+</button>
+
+</div>
+
+</form>
+
+</div>
+
+</div>
+
+{% endblock %}

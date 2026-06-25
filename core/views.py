@@ -875,7 +875,7 @@ def historia_magazynu(request):
 @login_required
 def inwentaryzacja_magazynu(request, stan_id):
     stan = get_object_or_404(
-        StanMagazynowy.objects.select_related("magazyn", "material"),
+        StanMagazynowy,
         id=stan_id,
     )
 
@@ -883,8 +883,8 @@ def inwentaryzacja_magazynu(request, stan_id):
         form = InwentaryzacjaForm(request.POST)
 
         if form.is_valid():
-            nowa_ilosc = form.cleaned_data["ilosc"]
-            roznica = nowa_ilosc - stan.ilosc
+
+            nowa_ilosc = form.cleaned_data["nowa_ilosc"]
 
             stan.ilosc = nowa_ilosc
             stan.save()
@@ -894,22 +894,30 @@ def inwentaryzacja_magazynu(request, stan_id):
                 material=stan.material,
                 pracownik=request.user,
                 typ="INWENTARYZACJA",
-                ilosc=roznica,
+                ilosc=nowa_ilosc,
                 opis=form.cleaned_data["opis"],
             )
 
-            messages.success(request, "Inwentaryzacja została zapisana.")
+            messages.success(
+                request,
+                "Inwentaryzacja została zapisana.",
+            )
+
             return redirect("core:magazyn_lista")
+
     else:
-        form = InwentaryzacjaForm(initial={"ilosc": stan.ilosc})
+        form = InwentaryzacjaForm(
+            initial={
+                "nowa_ilosc": stan.ilosc,
+            }
+        )
 
     return render(
         request,
         "magazyn/inwentaryzacja.html",
         {
-            "form": form,
             "stan": stan,
-            "tytul": "Inwentaryzacja",
+            "form": form,
         },
     )
 
@@ -1005,47 +1013,6 @@ def historia_magazynu(request):
         },
     )
 
-
-@login_required
-def inwentaryzacja_magazynu(request, stan_id):
-    stan = get_object_or_404(
-        StanMagazynowy.objects.select_related("magazyn", "material"),
-        id=stan_id,
-    )
-
-    if request.method == "POST":
-        form = InwentaryzacjaForm(request.POST)
-
-        if form.is_valid():
-            nowa_ilosc = form.cleaned_data["ilosc"]
-            roznica = nowa_ilosc - stan.ilosc
-
-            stan.ilosc = nowa_ilosc
-            stan.save()
-
-            ProcesMagazynowy.objects.create(
-                magazyn=stan.magazyn,
-                material=stan.material,
-                pracownik=request.user,
-                typ="INWENTARYZACJA",
-                ilosc=roznica,
-                opis=form.cleaned_data["opis"],
-            )
-
-            messages.success(request, "Inwentaryzacja została zapisana.")
-            return redirect("core:magazyn_lista")
-    else:
-        form = InwentaryzacjaForm(initial={"ilosc": stan.ilosc})
-
-    return render(
-        request,
-        "magazyn/inwentaryzacja.html",
-        {
-            "form": form,
-            "stan": stan,
-            "tytul": "Inwentaryzacja",
-        },
-    )
 
 
 @login_required

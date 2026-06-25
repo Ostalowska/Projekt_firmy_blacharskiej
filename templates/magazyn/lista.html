@@ -152,12 +152,16 @@
                         <td class="reserved">{{ stan.zarezerwowano }}</td>
                         <td class="available">{{ stan.dostepne }}</td>
                         <td>
-                            <div class="actions">
-                                <a class="btn" href="{% url 'core:inwentaryzacja_magazynu' stan.id %}">
-                                    Inwentaryzacja
-                                </a>
-                            </div>
-                        </td>
+							<div class="actions">
+								{% if czy_admin %}
+									<a class="btn" href="{% url 'core:inwentaryzacja_magazynu' stan.id %}">
+										Inwentaryzacja
+									</a>
+								{% else %}
+									-
+								{% endif %}
+							</div>
+						</td>
                     </tr>
                 {% empty %}
                     <tr>

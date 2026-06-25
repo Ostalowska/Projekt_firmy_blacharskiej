@@ -90,6 +90,10 @@ urlpatterns = [
     path("magazyn/stany/<int:stan_id>/inwentaryzacja/", views.inwentaryzacja_magazynu, name="inwentaryzacja_magazynu"),
     path("magazyn/proces/<int:proces_id>/cofnij/", views.cofnij_operacje_magazynowa, name="cofnij_operacje_magazynowa"),
     path("magazyn/dodaj/",views.magazyn_dodaj,name="magazyn_dodaj",),
-    path("magazyn/<int:magazyn_id>/edytuj/",views.magazyn_edytuj,name="magazyn_edytuj",
+    path("magazyn/<int:magazyn_id>/edytuj/",views.magazyn_edytuj,name="magazyn_edytuj",),
+    path(
+    "magazyn/stan/<int:stan_id>/inwentaryzacja/",
+    views.inwentaryzacja_magazynu,
+    name="inwentaryzacja_magazynu",
 ),
 ]

@@ -18,6 +18,7 @@ from .models import (
 )
 
 
+
 class KlientForm(forms.ModelForm):
     class Meta:
         model = Klient
@@ -345,10 +346,14 @@ class MagazynForm(forms.ModelForm):
 
 
 class InwentaryzacjaForm(forms.Form):
-    ilosc = forms.IntegerField(label="Ilość po inwentaryzacji", min_value=0)
+    nowa_ilosc = forms.IntegerField(
+        min_value=0,
+        label="Nowa ilość na magazynie",
+    )
+
     opis = forms.CharField(
-        label="Opis",
         required=False,
+        label="Opis",
         widget=forms.Textarea(attrs={"rows": 3}),
     )
 
