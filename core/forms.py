@@ -294,6 +294,7 @@ class ProcesMagazynowyForm(forms.ModelForm):
         fields = [
             "magazyn",
             "material",
+            "rozmiar",
             "typ",
             "ilosc",
             "opis",
@@ -302,16 +303,19 @@ class ProcesMagazynowyForm(forms.ModelForm):
         labels = {
             "magazyn": "Magazyn",
             "material": "Materiał",
+            "rozmiar": "Rozmiar blachy",
             "typ": "Typ operacji",
             "ilosc": "Ilość",
             "opis": "Opis",
         }
 
         widgets = {
-            "opis": forms.Textarea(attrs={
-                "rows": 3,
-                "placeholder": "Np. dostawa materiału albo wydanie do produkcji..."
-            }),
+            "opis": forms.Textarea(
+                attrs={
+                    "rows": 3,
+                    "placeholder": "Np. dostawa materiału albo wydanie do produkcji...",
+                }
+            ),
         }
 
     def __init__(self, *args, **kwargs):
@@ -322,11 +326,18 @@ class ProcesMagazynowyForm(forms.ModelForm):
             ("WYDANIE", "Wydanie materiału"),
         ]
 
+        self.fields["rozmiar"].queryset = RozmiarBlachy.objects.order_by(
+            "szerokosc_mm",
+            "wysokosc_mm",
+        )
+
     def clean_ilosc(self):
         ilosc = self.cleaned_data["ilosc"]
 
         if ilosc <= 0:
-            raise forms.ValidationError("Ilość musi być większa od zera.")
+            raise forms.ValidationError(
+                "Ilość musi być większa od zera."
+            )
 
         return ilosc
         

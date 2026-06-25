@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.db import transaction
 import json
 
 from .forms import (
@@ -656,22 +657,82 @@ def zamowienie_ustaw_rabat(request, zamowienie_id):
 
 @login_required
 def zamowienie_przyjmij(request, zamowienie_id):
-    zamowienie = get_object_or_404(Zamowienie, id=zamowienie_id)
+    zamowienie = get_object_or_404(
+        Zamowienie.objects.prefetch_related("pozycje__material"),
+        id=zamowienie_id,
+    )
 
-    if request.method == "POST":
-        if not zamowienie.pozycje.exists():
-            messages.error(request, "Nie można przyjąć zamówienia bez pozycji.")
-            return redirect("core:zamowienie_szczegoly", zamowienie_id=zamowienie.id)
+    if request.method != "POST":
+        return redirect("core:zamowienie_szczegoly", zamowienie_id=zamowienie.id)
 
-        zamowienie.status = "ZATWIERDZONE"
-        zamowienie.save(update_fields=["status"])
+    if zamowienie.status != "ROBOCZE":
+        messages.error(request, "To zamówienie zostało już przyjęte albo nie jest robocze.")
+        return redirect("core:zamowienie_szczegoly", zamowienie_id=zamowienie.id)
 
-        aktualizuj_platnosc_zamowienia(zamowienie)
+    if not zamowienie.pozycje.exists():
+        messages.error(request, "Nie można przyjąć zamówienia bez pozycji.")
+        return redirect("core:zamowienie_szczegoly", zamowienie_id=zamowienie.id)
 
-        messages.success(request, "Zamówienie zostało przyjęte.")
-        return redirect("core:zamowienia_lista")
+    try:
+        with transaction.atomic():
+            for pozycja in zamowienie.pozycje.select_related("material").all():
+                material = pozycja.material
+                ilosc_do_rezerwacji = pozycja.ilosc
 
-    return redirect("core:zamowienie_szczegoly", zamowienie_id=zamowienie.id)
+                stany = (
+                    StanMagazynowy.objects
+                    .select_for_update()
+                    .filter(material=material)
+                    .exclude(ilosc=0, zarezerwowano=0)
+                    .order_by("magazyn__nazwa")
+                )
+
+                dostepne_lacznie = sum(stan.dostepne for stan in stany)
+
+                if dostepne_lacznie < ilosc_do_rezerwacji:
+                    messages.error(
+                        request,
+                        f"Brak wystarczającej ilości materiału: {material}. "
+                        f"Potrzeba {ilosc_do_rezerwacji}, dostępne {dostepne_lacznie}."
+                    )
+                    raise ValueError("Brak materiału")
+
+                pozostalo = ilosc_do_rezerwacji
+
+                for stan in stany:
+                    if pozostalo <= 0:
+                        break
+
+                    do_rezerwacji = min(stan.dostepne, pozostalo)
+
+                    if do_rezerwacji <= 0:
+                        continue
+
+                    stan.zarezerwowano += do_rezerwacji
+                    stan.save(update_fields=["zarezerwowano"])
+
+                    ProcesMagazynowy.objects.create(
+                        magazyn=stan.magazyn,
+                        material=material,
+                        pracownik=request.user,
+                        typ="REZERWACJA",
+                        ilosc=do_rezerwacji,
+                        opis=f"Rezerwacja do zamówienia {zamowienie.numer or zamowienie.id}",
+                    )
+
+                    pozostalo -= do_rezerwacji
+
+            zamowienie.status = "ZATWIERDZONE"
+            zamowienie.save(update_fields=["status"])
+
+            aktualizuj_platnosc_zamowienia(zamowienie)
+
+    except ValueError:
+        return redirect("core:zamowienie_szczegoly", zamowienie_id=zamowienie.id)
+
+    messages.success(request, "Zamówienie zostało przyjęte, a materiały zostały zarezerwowane.")
+    return redirect("core:zamowienia_lista")
+    
 @login_required
 def pozycja_dodaj(request, zamowienie_id):
     zamowienie = get_object_or_404(Zamowienie, id=zamowienie_id)
@@ -791,7 +852,11 @@ def proces_magazynowy_dodaj(request):
             stan, created = StanMagazynowy.objects.get_or_create(
                 magazyn=proces.magazyn,
                 material=proces.material,
-                defaults={"ilosc": 0, "zarezerwowano": 0},
+                rozmiar=proces.rozmiar,
+                defaults={
+                    "ilosc": 0,
+                    "zarezerwowano": 0,
+                },
             )
 
             if proces.typ == "PRZYJECIE":
@@ -806,6 +871,10 @@ def proces_magazynowy_dodaj(request):
                     return redirect("core:proces_magazynowy_dodaj")
 
                 stan.ilosc -= proces.ilosc
+
+            else:
+                messages.error(request, "Nieobsługiwany typ operacji magazynowej.")
+                return redirect("core:proces_magazynowy_dodaj")
 
             stan.save()
             proces.save()

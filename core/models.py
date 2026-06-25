@@ -80,19 +80,26 @@ class Magazyn(models.Model):
 class StanMagazynowy(models.Model):
     magazyn = models.ForeignKey(Magazyn, on_delete=models.CASCADE)
     material = models.ForeignKey(Material, on_delete=models.CASCADE)
+
+    rozmiar = models.ForeignKey(
+        RozmiarBlachy,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+
     ilosc = models.IntegerField(default=0)
     zarezerwowano = models.IntegerField(default=0)
 
     class Meta:
-        unique_together = ("magazyn", "material")
+        unique_together = ("magazyn", "material", "rozmiar")
 
     @property
     def dostepne(self):
         return self.ilosc - self.zarezerwowano
 
     def __str__(self):
-        return f"{self.material} | stan: {self.ilosc}, rezerwacja: {self.zarezerwowano}"
-
+        return f"{self.material} | {self.rozmiar} | stan: {self.ilosc}, rezerwacja: {self.zarezerwowano}"
 
 class Zamowienie(models.Model):
     STATUS_CHOICES = [
@@ -181,6 +188,13 @@ class PozycjaZamowienia(models.Model):
         Zamowienie,
         on_delete=models.CASCADE,
         related_name="pozycje",
+    )
+
+    stan_magazynowy = models.ForeignKey(
+        StanMagazynowy,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
     )
 
     material = models.ForeignKey(Material, on_delete=models.CASCADE)
@@ -362,14 +376,25 @@ class Platnosc(models.Model):
 
 class ProcesMagazynowy(models.Model):
     TYP_CHOICES = [
-        ("PRZYJECIE", "Przyjęcie materiału"),
-        ("WYDANIE", "Wydanie materiału"),
-        ("INWENTARYZACJA", "Inwentaryzacja"),
-        ("COFNIECIE", "Cofnięcie operacji"),
+    ("PRZYJECIE", "Przyjęcie materiału"),
+    ("WYDANIE", "Wydanie materiału"),
+
+    ("REZERWACJA", "Rezerwacja materiału"),
+    ("ZWOLNIENIE_REZERWACJI", "Zwolnienie rezerwacji"),
+
+    ("INWENTARYZACJA", "Inwentaryzacja"),
+    ("COFNIECIE", "Cofnięcie operacji"),
     ]
 
     magazyn = models.ForeignKey(Magazyn, on_delete=models.CASCADE)
     material = models.ForeignKey(Material, on_delete=models.CASCADE)
+
+    rozmiar = models.ForeignKey(
+        RozmiarBlachy,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
 
     pracownik = models.ForeignKey(
         User,
@@ -378,7 +403,7 @@ class ProcesMagazynowy(models.Model):
         related_name="procesy_magazynowe",
     )
 
-    typ = models.CharField(max_length=20, choices=TYP_CHOICES)
+    typ = models.CharField(max_length=40,choices=TYP_CHOICES,)
     ilosc = models.IntegerField()
     data = models.DateTimeField(auto_now_add=True)
     opis = models.TextField(blank=True)
