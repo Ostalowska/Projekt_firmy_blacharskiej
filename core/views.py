@@ -37,19 +37,23 @@ from .models import (
     Platnosc,
     PracownikProfil,
     Cennik,
+    Zadanie,
 )
 
 
 def aktualizuj_platnosc_zamowienia(zamowienie):
     zamowienie.przelicz_kwote()
 
-    Platnosc.objects.update_or_create(
+    platnosc, created = Platnosc.objects.update_or_create(
         zamowienie=zamowienie,
         defaults={
             "kwota": zamowienie.kwota_koncowa,
             "rabat": zamowienie.rabat_wartosc,
+            "status": "NIEOPLACONA",
         },
     )
+
+    return platnosc
 
 @login_required
 def index(request):
@@ -562,6 +566,11 @@ def zamowienie_dodaj(request):
                     pozycja.zamowienie = zamowienie
                     pozycja.save()
 
+                    form.instance = pozycja
+                    form.save_m2m()
+
+                    pozycja.przelicz_i_zapisz()
+
                 zamowienie.przelicz_kwote()
 
                 messages.success(request, "Zamówienie robocze zostało zapisane.")
@@ -631,13 +640,17 @@ def zamowienie_szczegoly(request, zamowienie_id):
         id=zamowienie_id,
     )
 
-    pozycje = zamowienie.pozycje.select_related(
-        "stan_magazynowy",
-        "stan_magazynowy__magazyn",
-        "stan_magazynowy__material",
-        "stan_magazynowy__rozmiar",
-        "typ_uslugi",
-    ).all()
+    pozycje = (
+        zamowienie.pozycje
+        .select_related(
+            "stan_magazynowy",
+            "stan_magazynowy__magazyn",
+            "stan_magazynowy__material",
+            "stan_magazynowy__rozmiar",
+        )
+        .prefetch_related("uslugi")
+        .all()
+    )
 
     suma = sum(p.wartosc for p in pozycje)
 
@@ -675,6 +688,7 @@ def zamowienie_przyjmij(request, zamowienie_id):
             "pozycje__stan_magazynowy__material",
             "pozycje__stan_magazynowy__rozmiar",
             "pozycje__stan_magazynowy__magazyn",
+            "pozycje__uslugi",
         ),
         id=zamowienie_id,
     )
@@ -697,7 +711,8 @@ def zamowienie_przyjmij(request, zamowienie_id):
                 "stan_magazynowy__material",
                 "stan_magazynowy__rozmiar",
                 "stan_magazynowy__magazyn",
-            ).all():
+            ).prefetch_related("uslugi").all():
+
                 stan = pozycja.stan_magazynowy
 
                 if not stan:
@@ -727,6 +742,27 @@ def zamowienie_przyjmij(request, zamowienie_id):
                     opis=f"Rezerwacja do zamówienia {zamowienie.numer or zamowienie.id}",
                 )
 
+                Zadanie.objects.get_or_create(
+                    pozycja=pozycja,
+                    rola_docelowa="MAGAZYN",
+                    typ_uslugi=None,
+                    defaults={
+                        "status": "NOWE",
+                        "uwagi": "Przygotowanie materiału do zamówienia.",
+                    },
+                )
+
+                for usluga in pozycja.uslugi.all():
+                    Zadanie.objects.get_or_create(
+                        pozycja=pozycja,
+                        rola_docelowa="PRODUKCJA",
+                        typ_uslugi=usluga,
+                        defaults={
+                            "status": "NOWE",
+                            "uwagi": f"Wykonać usługę: {usluga.nazwa}",
+                        },
+                    )
+
             zamowienie.status = "ZATWIERDZONE"
             zamowienie.save(update_fields=["status"])
 
@@ -735,7 +771,10 @@ def zamowienie_przyjmij(request, zamowienie_id):
     except ValueError:
         return redirect("core:zamowienie_szczegoly", zamowienie_id=zamowienie.id)
 
-    messages.success(request, "Zamówienie zostało przyjęte, a materiały zostały zarezerwowane.")
+    messages.success(
+        request,
+        "Zamówienie zostało przyjęte, materiały zostały zarezerwowane, utworzono zadania i płatność."
+    )
     return redirect("core:zamowienia_lista")
     
 @login_required
@@ -822,28 +861,93 @@ def pozycja_usun(request, pozycja_id):
             "zamowienie": zamowienie,
         },
     )
+    
 @login_required
 def moje_prace(request):
+    try:
+        profil = request.user.pracownikprofil
+        rola = profil.rola
+    except PracownikProfil.DoesNotExist:
+        if request.user.is_superuser:
+            rola = "ADMIN"
+        else:
+            messages.error(request, "Twoje konto nie ma przypisanego profilu pracownika.")
+            return render(
+                request,
+                "moje_prace/lista.html",
+                {
+                    "zadania": [],
+                },
+            )
+
+    zadania = Zadanie.objects.select_related(
+        "pozycja",
+        "pozycja__zamowienie",
+        "pozycja__zamowienie__klient",
+        "pozycja__stan_magazynowy",
+        "pozycja__stan_magazynowy__material",
+        "pozycja__stan_magazynowy__rozmiar",
+        "typ_uslugi",
+        "przypisany_pracownik",
+    ).filter(
+        status__in=["NOWE", "W_REALIZACJI"],
+    )
+
+    if rola != "ADMIN":
+        zadania = zadania.filter(rola_docelowa=rola)
+
+    zadania = zadania.order_by("data_utworzenia")
 
     return render(
         request,
         "moje_prace/lista.html",
         {
-            "pozycje": [],
+            "zadania": zadania,
         },
     )
 
+@login_required
+def zadanie_status(request, zadanie_id, status):
+    zadanie = get_object_or_404(Zadanie, id=zadanie_id)
 
+    if request.method != "POST":
+        return redirect("core:moje_prace")
+
+    if status not in [
+        "W_REALIZACJI",
+        "ZREALIZOWANE",
+    ]:
+        messages.error(request, "Niepoprawny status.")
+        return redirect("core:moje_prace")
+
+    zadanie.przypisany_pracownik = request.user
+    zadanie.status = status
+    zadanie.save()
+
+    messages.success(request, "Status zadania został zaktualizowany.")
+
+    return redirect("core:moje_prace")
 
 @login_required
 def magazyn_lista(request):
-    stany = StanMagazynowy.objects.select_related(
-        "magazyn",
-        "material",
-    ).exclude(
-        ilosc=0,
-        zarezerwowano=0,
-    ).order_by("magazyn__nazwa", "material__nazwa")
+    stany = (
+        StanMagazynowy.objects
+        .select_related(
+            "magazyn",
+            "material",
+            "rozmiar",
+        )
+        .exclude(
+            ilosc=0,
+            zarezerwowano=0,
+        )
+        .order_by(
+            "magazyn__nazwa",
+            "material__nazwa",
+            "rozmiar__szerokosc_mm",
+            "rozmiar__wysokosc_mm",
+        )
+    )
 
     return render(
         request,
@@ -1230,6 +1334,29 @@ def platnosci_lista(request):
         },
     )
 
+@login_required
+def platnosc_oznacz_oplacona(request, platnosc_id):
+    platnosc = get_object_or_404(Platnosc, id=platnosc_id)
+
+    if request.method == "POST":
+        platnosc.status = "OPLACONA"
+        platnosc.save(update_fields=["status"])
+
+        messages.success(request, "Płatność została oznaczona jako opłacona.")
+
+    return redirect("core:platnosci_lista")
+
+@login_required
+def platnosc_anuluj_status(request, platnosc_id):
+    platnosc = get_object_or_404(Platnosc, id=platnosc_id)
+
+    if request.method == "POST":
+        platnosc.status = "ANULOWANA"
+        platnosc.save(update_fields=["status"])
+
+        messages.success(request, "Płatność została anulowana.")
+
+    return redirect("core:platnosci_lista")
 
 @login_required
 def platnosc_dodaj(request):

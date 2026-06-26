@@ -104,14 +104,24 @@
                     <td>{{ platnosc.data_utworzenia|date:"d.m.Y H:i" }}</td>
                     <td>
                         <div class="actions">
-                            <a class="btn" href="{% url 'core:platnosc_edytuj' platnosc.id %}">
-                                Edytuj
-                            </a>
+							{% if platnosc.status == "NIEOPLACONA" %}
+								<form method="post" action="{% url 'core:platnosc_oznacz_oplacona' platnosc.id %}">
+									{% csrf_token %}
+									<button type="submit" class="btn">
+										Oznacz jako opłacona
+									</button>
+								</form>
 
-                            <a class="btn btn-danger" href="{% url 'core:platnosc_usun' platnosc.id %}">
-                                Usuń
-                            </a>
-                        </div>
+								<form method="post" action="{% url 'core:platnosc_anuluj_status' platnosc.id %}">
+									{% csrf_token %}
+									<button type="submit" class="btn btn-danger">
+										Anuluj
+									</button>
+								</form>
+							{% else %}
+								-
+							{% endif %}
+						</div>
                     </td>
                 </tr>
             {% empty %}

@@ -209,7 +209,7 @@ class PozycjaZamowieniaForm(forms.ModelForm):
             "czy_niestandardowy",
             "szerokosc_niestandardowa_mm",
             "wysokosc_niestandardowa_mm",
-            "typ_uslugi",
+            "uslugi",
             "ilosc",
         ]
 
@@ -218,8 +218,12 @@ class PozycjaZamowieniaForm(forms.ModelForm):
             "czy_niestandardowy": "Rozmiar niestandardowy",
             "szerokosc_niestandardowa_mm": "Szerokość niestandardowa (mm)",
             "wysokosc_niestandardowa_mm": "Wysokość niestandardowa (mm)",
-            "typ_uslugi": "Typ usługi",
+            "uslugi": "Usługi",
             "ilosc": "Ilość",
+        }
+
+        widgets = {
+            "uslugi": forms.CheckboxSelectMultiple,
         }
 
     def __init__(self, *args, **kwargs):
@@ -233,6 +237,7 @@ class PozycjaZamowieniaForm(forms.ModelForm):
                 "rozmiar",
             )
             .order_by(
+                "magazyn__nazwa",
                 "material__nazwa",
                 "material__grubosc_mm",
                 "rozmiar__szerokosc_mm",
@@ -240,13 +245,13 @@ class PozycjaZamowieniaForm(forms.ModelForm):
             )
         )
 
+        self.fields["uslugi"].queryset = TypUslugi.objects.order_by("nazwa")
+
     def clean_ilosc(self):
         ilosc = self.cleaned_data["ilosc"]
 
         if ilosc <= 0:
-            raise forms.ValidationError(
-                "Ilość musi być większa od zera."
-            )
+            raise forms.ValidationError("Ilość musi być większa od zera.")
 
         return ilosc
 
@@ -254,6 +259,7 @@ class PozycjaZamowieniaForm(forms.ModelForm):
         cleaned_data = super().clean()
 
         stan = cleaned_data.get("stan_magazynowy")
+        ilosc = cleaned_data.get("ilosc")
         czy_niestandardowy = cleaned_data.get("czy_niestandardowy")
         szerokosc = cleaned_data.get("szerokosc_niestandardowa_mm")
         wysokosc = cleaned_data.get("wysokosc_niestandardowa_mm")
@@ -261,6 +267,11 @@ class PozycjaZamowieniaForm(forms.ModelForm):
         if not stan:
             raise forms.ValidationError(
                 "Wybierz arkusz z magazynu."
+            )
+
+        if stan and ilosc and ilosc > stan.dostepne:
+            raise forms.ValidationError(
+                f"Nie można zamówić {ilosc} szt. Dostępne na magazynie: {stan.dostepne} szt."
             )
 
         if czy_niestandardowy:
@@ -274,9 +285,18 @@ class PozycjaZamowieniaForm(forms.ModelForm):
                     "Wymiary niestandardowe muszą być większe od zera."
                 )
 
+            if (
+                stan.rozmiar and (
+                    szerokosc > stan.rozmiar.szerokosc_mm
+                    or wysokosc > stan.rozmiar.wysokosc_mm
+                )
+            ):
+                raise forms.ValidationError(
+                    "Wybrany arkusz jest za mały dla podanych wymiarów."
+                )
+
         return cleaned_data
-
-
+        
 PozycjaZamowieniaFormSet = formset_factory(
     PozycjaZamowieniaForm,
     extra=1,

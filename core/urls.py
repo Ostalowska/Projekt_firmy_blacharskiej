@@ -69,7 +69,7 @@ urlpatterns = [
     path("pozycje/<int:pozycja_id>/usun/", views.pozycja_usun, name="pozycja_usun"),
     
     path("moje-prace/", views.moje_prace, name="moje_prace"),
-    
+    path("moje-prace/zadanie/<int:zadanie_id>/<str:status>/",views.zadanie_status,name="zadanie_status",),
     path("magazyn/", views.magazyn_lista, name="magazyn_lista"),
     path("magazyn/proces/dodaj/", views.proces_magazynowy_dodaj, name="proces_magazynowy_dodaj"),
     
@@ -94,6 +94,16 @@ urlpatterns = [
     path(
     "magazyn/stan/<int:stan_id>/inwentaryzacja/",
     views.inwentaryzacja_magazynu,
-    name="inwentaryzacja_magazynu",
+    name="inwentaryzacja_magazynu",),
+    path(
+    "platnosci/<int:platnosc_id>/oplacona/",
+    views.platnosc_oznacz_oplacona,
+    name="platnosc_oznacz_oplacona",
+),
+
+path(
+    "platnosci/<int:platnosc_id>/anuluj-status/",
+    views.platnosc_anuluj_status,
+    name="platnosc_anuluj_status",
 ),
 ]

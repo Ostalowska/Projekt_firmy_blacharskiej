@@ -48,48 +48,92 @@
         </a>
     </div>
 
-    <h2>Pozycje zamówienia</h2>
+	<h2>Pozycje zamówienia</h2>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Materiał</th>
-                <th>Rozmiar</th>
-                <th>Usługa</th>
-                <th>Ilość</th>
-                <th>Cena jedn.</th>
-                <th>Wartość</th>
-            </tr>
-        </thead>
+	<table>
+		<thead>
+			<tr>
+				<th>Magazyn</th>
+				<th>Materiał</th>
+				<th>Rozmiar arkusza</th>
+				<th>Rozmiar docelowy</th>
+				<th>Usługi</th>
+				<th>Ilość</th>
+				<th>Cena jedn.</th>
+				<th>Wartość</th>
+			</tr>
+		</thead>
 
-        <tbody>
-            {% for pozycja in pozycje %}
-                <tr>
-                    <td>{{ pozycja.material.nazwa }} {{ pozycja.material.grubosc_mm }} mm</td>
-                    <td>
-                        {% if pozycja.czy_niestandardowy %}
-                            {{ pozycja.szerokosc_niestandardowa_mm }} x {{ pozycja.wysokosc_niestandardowa_mm }} mm
-                            <br><small>niestandardowy</small>
-                        {% elif pozycja.rozmiar %}
-                            {{ pozycja.rozmiar.szerokosc_mm }} x {{ pozycja.rozmiar.wysokosc_mm }} mm
-                        {% else %}
-                            -
-                        {% endif %}
-                    </td>
-                    <td>{{ pozycja.typ_uslugi|default:"-" }}</td>
-                    <td>{{ pozycja.ilosc }}</td>
-                    <td>{{ pozycja.cena_jednostkowa }} zł</td>
-                    <td>{{ pozycja.wartosc }} zł</td>
-                </tr>
-            {% empty %}
-                <tr>
-                    <td colspan="6" style="text-align:center;">
-                        Brak pozycji w tym zamówieniu.
-                    </td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+		<tbody>
+			{% for pozycja in pozycje %}
+				<tr>
+					<td>
+						{% if pozycja.stan_magazynowy %}
+							{{ pozycja.stan_magazynowy.magazyn.nazwa }}
+						{% else %}
+							-
+						{% endif %}
+					</td>
+
+					<td>
+						{% if pozycja.stan_magazynowy %}
+							{{ pozycja.stan_magazynowy.material.nazwa }}
+							{{ pozycja.stan_magazynowy.material.grubosc_mm }} mm
+						{% else %}
+							-
+						{% endif %}
+					</td>
+
+					<td>
+						{% if pozycja.stan_magazynowy.rozmiar %}
+							{{ pozycja.stan_magazynowy.rozmiar.szerokosc_mm }}
+							x
+							{{ pozycja.stan_magazynowy.rozmiar.wysokosc_mm }}
+							mm
+						{% else %}
+							-
+						{% endif %}
+					</td>
+
+					<td>
+						{% if pozycja.czy_niestandardowy %}
+							{{ pozycja.szerokosc_niestandardowa_mm }}
+							x
+							{{ pozycja.wysokosc_niestandardowa_mm }}
+							mm
+							<br>
+							<small>niestandardowy</small>
+						{% elif pozycja.stan_magazynowy and pozycja.stan_magazynowy.rozmiar %}
+							{{ pozycja.stan_magazynowy.rozmiar.szerokosc_mm }}
+							x
+							{{ pozycja.stan_magazynowy.rozmiar.wysokosc_mm }}
+							mm
+						{% else %}
+							-
+						{% endif %}
+					</td>
+
+					<td>
+						{% for usluga in pozycja.uslugi.all %}
+							{{ usluga.nazwa }}{% if not forloop.last %}, {% endif %}
+						{% empty %}
+							-
+						{% endfor %}
+					</td>
+
+					<td>{{ pozycja.ilosc }}</td>
+					<td>{{ pozycja.cena_jednostkowa }} zł</td>
+					<td>{{ pozycja.wartosc }} zł</td>
+				</tr>
+			{% empty %}
+				<tr>
+					<td colspan="8" style="text-align:center;">
+						Brak pozycji w tym zamówieniu.
+					</td>
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>
 
     <div class="card">
         <h2>Rabat</h2>

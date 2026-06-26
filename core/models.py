@@ -209,11 +209,10 @@ class PozycjaZamowienia(models.Model):
         blank=True,
     )
 
-    typ_uslugi = models.ForeignKey(
+    uslugi = models.ManyToManyField(
         TypUslugi,
-        on_delete=models.SET_NULL,
-        null=True,
         blank=True,
+        related_name="pozycje_zamowienia",
     )
 
     ilosc = models.PositiveIntegerField(default=1)
@@ -243,35 +242,53 @@ class PozycjaZamowienia(models.Model):
 
         return Decimal(szer * wys) / Decimal("1000000")
 
+
     def przelicz_cene(self):
         powierzchnia = self.powierzchnia_m2()
 
         cena_materialu = Decimal("0.00")
+
         if self.stan_magazynowy:
             cena_materialu = powierzchnia * self.stan_magazynowy.material.cena_za_m2
 
-        cena_uslugi = Decimal("0.00")
-        if self.typ_uslugi:
-            cennik = (
-                Cennik.objects.filter(typ_uslugi=self.typ_uslugi)
-                .order_by("-data_od")
-                .first()
-            )
-            if cennik:
-                cena_uslugi = cennik.cena
+        cena_uslug = Decimal("0.00")
 
-        self.cena_jednostkowa = cena_materialu + cena_uslugi
+        if self.pk:
+            for usluga in self.uslugi.all():
+                cennik = (
+                    Cennik.objects
+                    .filter(typ_uslugi=usluga)
+                    .order_by("-data_od")
+                    .first()
+                )
+
+                if cennik:
+                    cena_uslug += cennik.cena
+
+        self.cena_jednostkowa = cena_materialu + cena_uslug
         self.wartosc = self.cena_jednostkowa * self.ilosc
 
-    def save(self, *args, **kwargs):
+
+    def przelicz_i_zapisz(self):
         self.przelicz_cene()
-        super().save(*args, **kwargs)
+        self.save(
+            update_fields=[
+                "cena_jednostkowa",
+                "wartosc",
+            ]
+        )
         self.zamowienie.przelicz_kwote()
+
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
 
     def delete(self, *args, **kwargs):
         zamowienie = self.zamowienie
         super().delete(*args, **kwargs)
         zamowienie.przelicz_kwote()
+
 
     def __str__(self):
         if self.stan_magazynowy:

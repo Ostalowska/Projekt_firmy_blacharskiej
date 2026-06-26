@@ -101,22 +101,29 @@ class PozycjaZamowieniaAdmin(admin.ModelAdmin):
         "id",
         "zamowienie",
         "stan_magazynowy",
-        "typ_uslugi",
+        "lista_uslug",
         "ilosc",
         "cena_jednostkowa",
         "wartosc",
     )
 
     list_filter = (
-        "typ_uslugi",
         "czy_niestandardowy",
+        "uslugi",
     )
 
     search_fields = (
         "zamowienie__numer",
         "stan_magazynowy__material__nazwa",
         "stan_magazynowy__magazyn__nazwa",
+        "stan_magazynowy__rozmiar__szerokosc_mm",
+        "stan_magazynowy__rozmiar__wysokosc_mm",
     )
+
+    def lista_uslug(self, obj):
+        return ", ".join(usluga.nazwa for usluga in obj.uslugi.all())
+
+    lista_uslug.short_description = "Usługi"
 
 
 @admin.register(Zadanie)
