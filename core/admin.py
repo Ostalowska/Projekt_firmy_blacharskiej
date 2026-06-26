@@ -1,19 +1,19 @@
 from django.contrib import admin
 
 from .models import (
-    Klient,
-    PracownikProfil,
-    Material,
-    RozmiarBlachy,
-    TypUslugi,
     Cennik,
+    Klient,
     Magazyn,
-    StanMagazynowy,
-    Zamowienie,
-    PozycjaZamowienia,
-    Zadanie,
+    Material,
     Platnosc,
+    PozycjaZamowienia,
+    PracownikProfil,
     ProcesMagazynowy,
+    RozmiarBlachy,
+    StanMagazynowy,
+    TypUslugi,
+    Zadanie,
+    Zamowienie,
 )
 
 

@@ -6,43 +6,59 @@
 
     <style>
         body {
+            margin: 0;
+            min-height: 100vh;
             font-family: Arial, sans-serif;
             background: #ecf0f1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .login-card {
-            width: 400px;
-            margin: 100px auto;
+            width: 420px;
             background: white;
             padding: 30px;
             border-radius: 10px;
-            box-shadow: 0 0 12px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
         h1 {
             text-align: center;
             color: #2c3e50;
+            margin-top: 0;
+            margin-bottom: 25px;
         }
 
-        form {
+        .form-row {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 6px;
+            margin-bottom: 15px;
+        }
+
+        label {
+            font-weight: bold;
+            color: #2c3e50;
         }
 
         input {
             padding: 10px;
             border: 1px solid #ccc;
             border-radius: 6px;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         button {
+            width: 100%;
             padding: 12px;
             border: none;
             background: #2c3e50;
             color: white;
             border-radius: 6px;
             cursor: pointer;
+            font-size: 15px;
         }
 
         button:hover {
@@ -50,9 +66,11 @@
         }
 
         .errorlist {
-            color: red;
+            color: #c0392b;
             list-style: none;
             padding: 0;
+            margin: 0 0 15px 0;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -64,7 +82,20 @@
 
     <form method="post">
         {% csrf_token %}
-        {{ form.as_p }}
+
+        {{ form.non_field_errors }}
+
+        <div class="form-row">
+            <label for="{{ form.username.id_for_label }}">Login</label>
+            {{ form.username }}
+            {{ form.username.errors }}
+        </div>
+
+        <div class="form-row">
+            <label for="{{ form.password.id_for_label }}">Hasło</label>
+            {{ form.password }}
+            {{ form.password.errors }}
+        </div>
 
         <button type="submit">
             Zaloguj

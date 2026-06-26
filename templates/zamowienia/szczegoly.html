@@ -1,26 +1,101 @@
 {% extends "base.html" %}
 
 {% block content %}
-
 <style>
-    .page-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-    h1, h2 { text-align: center; color: #2c3e50; }
-    .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; }
-    .btn { padding: 9px 14px; background: #2c3e50; color: white; text-decoration: none; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; display: inline-block; }
-    .btn:hover { background: #1f2a38; }
-    .btn-danger { background: #c0392b; }
-    .btn-success { background: #166534; }
-    .btn-secondary { background: #7f8c8d; }
-    .messages { margin-bottom: 15px; }
-    .message { background: #d4edda; color: #155724; padding: 12px; border-radius: 6px; text-align: center; font-weight: bold; }
-    table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    thead { background: #2c3e50; color: white; }
-    th, td { padding: 12px 15px; border-bottom: 1px solid #eee; text-align: left; }
-    tbody tr:nth-child(even) { background: #f8f9fa; }
-    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-    .summary { font-size: 18px; font-weight: bold; text-align: right; margin-top: 15px; color: #2c3e50; }
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-    input, select { padding: 10px; border-radius: 6px; border: 1px solid #ccc; width: 100%; box-sizing: border-box; }
+    .page-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    h1, h2 {
+        text-align: center;
+        color: #2c3e50;
+    }
+    .card {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    .btn {
+        padding: 9px 14px;
+        background: #2c3e50;
+        color: white;
+        text-decoration: none;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        display: inline-block;
+    }
+    .btn:hover {
+        background: #1f2a38;
+    }
+    .btn-danger {
+        background: #c0392b;
+    }
+    .btn-success {
+        background: #166534;
+    }
+    .btn-secondary {
+        background: #7f8c8d;
+    }
+    .messages {
+        margin-bottom: 15px;
+    }
+    .message {
+        background: #d4edda;
+        color: #155724;
+        padding: 12px;
+        border-radius: 6px;
+        text-align: center;
+        font-weight: bold;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    thead {
+        background: #2c3e50;
+        color: white;
+    }
+    th, td {
+        padding: 12px 15px;
+        border-bottom: 1px solid #eee;
+        text-align: left;
+    }
+    tbody tr:nth-child(even) {
+        background: #f8f9fa;
+    }
+    .actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .summary {
+        font-size: 18px;
+        font-weight: bold;
+        text-align: right;
+        margin-top: 15px;
+        color: #2c3e50;
+    }
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+    }
+    input, select {
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        width: 100%;
+        box-sizing: border-box;
+    }
 </style>
 
 <div class="page-container">
@@ -42,98 +117,94 @@
         <p><strong>Status:</strong> {{ zamowienie.get_status_display }}</p>
         <p><strong>Data utworzenia:</strong> {{ zamowienie.data_utworzenia|date:"d.m.Y H:i" }}</p>
         <p><strong>Uwagi:</strong> {{ zamowienie.uwagi|default:"-" }}</p>
-
-        <a class="btn btn-secondary" href="{% url 'core:zamowienia_lista' %}">
-            Powrót do listy
-        </a>
     </div>
 
-	<h2>Pozycje zamówienia</h2>
+    <h2>Pozycje zamówienia</h2>
 
-	<table>
-		<thead>
-			<tr>
-				<th>Magazyn</th>
-				<th>Materiał</th>
-				<th>Rozmiar arkusza</th>
-				<th>Rozmiar docelowy</th>
-				<th>Usługi</th>
-				<th>Ilość</th>
-				<th>Cena jedn.</th>
-				<th>Wartość</th>
-			</tr>
-		</thead>
+    <table>
+        <thead>
+            <tr>
+                <th>Magazyn</th>
+                <th>Materiał</th>
+                <th>Rozmiar arkusza</th>
+                <th>Rozmiar docelowy</th>
+                <th>Usługi</th>
+                <th>Ilość</th>
+                <th>Cena jedn.</th>
+                <th>Wartość</th>
+            </tr>
+        </thead>
 
-		<tbody>
-			{% for pozycja in pozycje %}
-				<tr>
-					<td>
-						{% if pozycja.stan_magazynowy %}
-							{{ pozycja.stan_magazynowy.magazyn.nazwa }}
-						{% else %}
-							-
-						{% endif %}
-					</td>
+        <tbody>
+            {% for pozycja in pozycje %}
+                <tr>
+                    <td>
+                        {% if pozycja.stan_magazynowy %}
+                            {{ pozycja.stan_magazynowy.magazyn.nazwa }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
 
-					<td>
-						{% if pozycja.stan_magazynowy %}
-							{{ pozycja.stan_magazynowy.material.nazwa }}
-							{{ pozycja.stan_magazynowy.material.grubosc_mm }} mm
-						{% else %}
-							-
-						{% endif %}
-					</td>
+                    <td>
+                        {% if pozycja.stan_magazynowy %}
+                            {{ pozycja.stan_magazynowy.material.nazwa }}
+                            {{ pozycja.stan_magazynowy.material.grubosc_mm }} mm
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
 
-					<td>
-						{% if pozycja.stan_magazynowy.rozmiar %}
-							{{ pozycja.stan_magazynowy.rozmiar.szerokosc_mm }}
-							x
-							{{ pozycja.stan_magazynowy.rozmiar.wysokosc_mm }}
-							mm
-						{% else %}
-							-
-						{% endif %}
-					</td>
+                    <td>
+                        {% if pozycja.stan_magazynowy.rozmiar %}
+                            {{ pozycja.stan_magazynowy.rozmiar.szerokosc_mm }}
+                            x
+                            {{ pozycja.stan_magazynowy.rozmiar.wysokosc_mm }}
+                            mm
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
 
-					<td>
-						{% if pozycja.czy_niestandardowy %}
-							{{ pozycja.szerokosc_niestandardowa_mm }}
-							x
-							{{ pozycja.wysokosc_niestandardowa_mm }}
-							mm
-							<br>
-							<small>niestandardowy</small>
-						{% elif pozycja.stan_magazynowy and pozycja.stan_magazynowy.rozmiar %}
-							{{ pozycja.stan_magazynowy.rozmiar.szerokosc_mm }}
-							x
-							{{ pozycja.stan_magazynowy.rozmiar.wysokosc_mm }}
-							mm
-						{% else %}
-							-
-						{% endif %}
-					</td>
+                    <td>
+                        {% if pozycja.czy_niestandardowy %}
+                            {{ pozycja.szerokosc_niestandardowa_mm }}
+                            x
+                            {{ pozycja.wysokosc_niestandardowa_mm }}
+                            mm
+                            <br>
+                            <small>niestandardowy</small>
+                        {% elif pozycja.stan_magazynowy and pozycja.stan_magazynowy.rozmiar %}
+                            {{ pozycja.stan_magazynowy.rozmiar.szerokosc_mm }}
+                            x
+                            {{ pozycja.stan_magazynowy.rozmiar.wysokosc_mm }}
+                            mm
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
 
-					<td>
-						{% for usluga in pozycja.uslugi.all %}
-							{{ usluga.nazwa }}{% if not forloop.last %}, {% endif %}
-						{% empty %}
-							-
-						{% endfor %}
-					</td>
+                    <td>
+                        {% for usluga in pozycja.uslugi.all %}
+                            {{ usluga.nazwa }}{% if not forloop.last %}, {% endif %}
+                        {% empty %}
+                            -
+                        {% endfor %}
+                    </td>
 
-					<td>{{ pozycja.ilosc }}</td>
-					<td>{{ pozycja.cena_jednostkowa }} zł</td>
-					<td>{{ pozycja.wartosc }} zł</td>
-				</tr>
-			{% empty %}
-				<tr>
-					<td colspan="8" style="text-align:center;">
-						Brak pozycji w tym zamówieniu.
-					</td>
-				</tr>
-			{% endfor %}
-		</tbody>
-	</table>
+                    <td>{{ pozycja.ilosc }}</td>
+                    <td>{{ pozycja.cena_jednostkowa }} zł</td>
+                    <td>{{ pozycja.wartosc }} zł</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="8" style="text-align:center;">
+                        Brak pozycji w tym zamówieniu.
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 
     <div class="card">
         <h2>Rabat</h2>
@@ -141,7 +212,7 @@
         <form method="post" action="{% url 'core:zamowienie_ustaw_rabat' zamowienie.id %}">
             {% csrf_token %}
 
-            <div class="form-grid">
+            <div class="form-grid" style="max-width:500px;">
                 {% for field in rabat_form %}
                     <div>
                         <label>{{ field.label }}</label>
@@ -151,7 +222,7 @@
                 {% endfor %}
             </div>
 
-            <div class="actions" style="margin-top: 15px;">
+            <div style="margin-top: 15px;">
                 <button type="submit" class="btn">
                     Zapisz rabat
                 </button>
@@ -165,17 +236,31 @@
         Kwota końcowa: {{ zamowienie.kwota_koncowa }} zł
     </div>
 
-    {% if zamowienie.status == "ROBOCZE" %}
-        <div class="card" style="text-align: center;">
-            <form method="post" action="{% url 'core:zamowienie_przyjmij' zamowienie.id %}">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-success">
-                    Przyjmij zamówienie
-                </button>
-            </form>
+    <div class="card" style="text-align:center;">
+        <div class="actions" style="justify-content:center;">
+            <a class="btn btn-secondary" href="{% url 'core:zamowienia_lista' %}">
+                Anuluj
+            </a>
+
+            {% if zamowienie.status == "ROBOCZE" %}
+                <form method="post" action="{% url 'core:zamowienie_przyjmij' zamowienie.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success">
+                        Przyjmij zamówienie
+                    </button>
+                </form>
+            {% endif %}
+
+            {% if zamowienie.status == "WYKONANE" %}
+                <form method="post" action="{% url 'core:zamowienie_zakoncz' zamowienie.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success">
+                        Wydaj klientowi i zakończ zamówienie
+                    </button>
+                </form>
+            {% endif %}
         </div>
-    {% endif %}
+    </div>
 
 </div>
-
 {% endblock %}

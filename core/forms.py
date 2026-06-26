@@ -3,20 +3,19 @@ from django.contrib.auth.models import User
 from django.forms import formset_factory
 
 from .models import (
+    Cennik,
     Klient,
+    Magazyn,
     Material,
+    Platnosc,
+    PozycjaZamowienia,
+    PracownikProfil,
+    ProcesMagazynowy,
     RozmiarBlachy,
+    StanMagazynowy,
     TypUslugi,
     Zamowienie,
-    PozycjaZamowienia,
-    Magazyn,
-    StanMagazynowy,
-    ProcesMagazynowy,
-    Platnosc,
-    PracownikProfil,
-    Cennik,
 )
-
 
 
 class KlientForm(forms.ModelForm):
@@ -48,7 +47,9 @@ class KlientForm(forms.ModelForm):
             "telefon": forms.TextInput(attrs={"placeholder": "Telefon"}),
             "email": forms.EmailInput(attrs={"placeholder": "Email"}),
             "adres": forms.TextInput(attrs={"placeholder": "Adres"}),
-            "nazwa_firmy": forms.TextInput(attrs={"placeholder": "Nazwa firmy opcjonalnie"}),
+            "nazwa_firmy": forms.TextInput(
+                attrs={"placeholder": "Nazwa firmy opcjonalnie"}
+            ),
             "nip": forms.TextInput(attrs={"placeholder": "NIP opcjonalnie"}),
         }
 
@@ -71,7 +72,8 @@ class KlientForm(forms.ModelForm):
         if telefon and len(telefon) != 9:
             raise forms.ValidationError("Telefon powinien mieć 9 cyfr.")
         return telefon
-        
+
+
 class MaterialForm(forms.ModelForm):
     class Meta:
         model = Material
@@ -93,9 +95,7 @@ class MaterialForm(forms.ModelForm):
         grubosc = self.cleaned_data["grubosc_mm"]
 
         if grubosc <= 0:
-            raise forms.ValidationError(
-                "Grubość musi być większa od zera."
-            )
+            raise forms.ValidationError("Grubość musi być większa od zera.")
 
         return grubosc
 
@@ -103,11 +103,10 @@ class MaterialForm(forms.ModelForm):
         cena = self.cleaned_data["cena_za_m2"]
 
         if cena < 0:
-            raise forms.ValidationError(
-                "Cena nie może być ujemna."
-            )
+            raise forms.ValidationError("Cena nie może być ujemna.")
 
         return cena
+
 
 class RozmiarBlachyForm(forms.ModelForm):
     class Meta:
@@ -137,6 +136,7 @@ class RozmiarBlachyForm(forms.ModelForm):
             raise forms.ValidationError("Wysokość musi być większa od zera.")
 
         return wysokosc
+
 
 class TypUslugiForm(forms.ModelForm):
     cena = forms.DecimalField(
@@ -180,7 +180,8 @@ class TypUslugiForm(forms.ModelForm):
             raise forms.ValidationError("Nazwa usługi musi mieć minimum 3 znaki.")
 
         return nazwa
-        
+
+
 class ZamowienieForm(forms.ModelForm):
     class Meta:
         model = Zamowienie
@@ -195,12 +196,15 @@ class ZamowienieForm(forms.ModelForm):
         }
 
         widgets = {
-            "uwagi": forms.Textarea(attrs={
-                "rows": 4,
-                "placeholder": "Dodatkowe informacje do zamówienia..."
-            }),
+            "uwagi": forms.Textarea(
+                attrs={
+                    "rows": 4,
+                    "placeholder": "Dodatkowe informacje do zamówienia...",
+                }
+            ),
         }
-        
+
+
 class PozycjaZamowieniaForm(forms.ModelForm):
     class Meta:
         model = PozycjaZamowienia
@@ -230,7 +234,10 @@ class PozycjaZamowieniaForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         self.fields["stan_magazynowy"].queryset = (
-            StanMagazynowy.objects.filter(ilosc__gt=0)
+            StanMagazynowy.objects.filter(
+                ilosc__gt=0,
+                rozmiar__isnull=False,
+            )
             .select_related(
                 "magazyn",
                 "material",
@@ -265,9 +272,7 @@ class PozycjaZamowieniaForm(forms.ModelForm):
         wysokosc = cleaned_data.get("wysokosc_niestandardowa_mm")
 
         if not stan:
-            raise forms.ValidationError(
-                "Wybierz arkusz z magazynu."
-            )
+            raise forms.ValidationError("Wybierz arkusz z magazynu.")
 
         if stan and ilosc and ilosc > stan.dostepne:
             raise forms.ValidationError(
@@ -285,18 +290,17 @@ class PozycjaZamowieniaForm(forms.ModelForm):
                     "Wymiary niestandardowe muszą być większe od zera."
                 )
 
-            if (
-                stan.rozmiar and (
-                    szerokosc > stan.rozmiar.szerokosc_mm
-                    or wysokosc > stan.rozmiar.wysokosc_mm
-                )
+            if stan.rozmiar and (
+                szerokosc > stan.rozmiar.szerokosc_mm
+                or wysokosc > stan.rozmiar.wysokosc_mm
             ):
                 raise forms.ValidationError(
                     "Wybrany arkusz jest za mały dla podanych wymiarów."
                 )
 
         return cleaned_data
-        
+
+
 PozycjaZamowieniaFormSet = formset_factory(
     PozycjaZamowieniaForm,
     extra=1,
@@ -324,7 +328,8 @@ class RabatForm(forms.ModelForm):
             raise forms.ValidationError("Rabat nie może być ujemny.")
 
         return rabat
-        
+
+
 class ProcesMagazynowyForm(forms.ModelForm):
     class Meta:
         model = ProcesMagazynowy
@@ -372,12 +377,11 @@ class ProcesMagazynowyForm(forms.ModelForm):
         ilosc = self.cleaned_data["ilosc"]
 
         if ilosc <= 0:
-            raise forms.ValidationError(
-                "Ilość musi być większa od zera."
-            )
+            raise forms.ValidationError("Ilość musi być większa od zera.")
 
         return ilosc
-        
+
+
 class MagazynForm(forms.ModelForm):
     class Meta:
         model = Magazyn
@@ -411,7 +415,8 @@ class CofniecieOperacjiForm(forms.Form):
         label="Powód cofnięcia",
         widget=forms.Textarea(attrs={"rows": 3}),
     )
-    
+
+
 class PlatnoscForm(forms.ModelForm):
     class Meta:
         model = Platnosc
@@ -444,6 +449,7 @@ class PlatnoscForm(forms.ModelForm):
             raise forms.ValidationError("Rabat nie może być ujemny.")
 
         return rabat
+
 
 class PracownikCreateForm(forms.Form):
     username = forms.CharField(label="Login", max_length=150)

@@ -1,7 +1,7 @@
 from decimal import Decimal
 
-from django.db import models
 from django.contrib.auth.models import User
+from django.db import models
 from django.utils import timezone
 
 
@@ -32,7 +32,9 @@ class PracownikProfil(models.Model):
     rola = models.CharField(max_length=20, choices=ROLE_CHOICES)
 
     def __str__(self):
-        return f"{self.user.first_name} {self.user.last_name} - {self.get_rola_display()}"
+        return (
+            f"{self.user.first_name} {self.user.last_name} - {self.get_rola_display()}"
+        )
 
 
 class Material(models.Model):
@@ -100,6 +102,7 @@ class StanMagazynowy(models.Model):
 
     def __str__(self):
         return f"{self.material} | {self.rozmiar} | stan: {self.ilosc}, rezerwacja: {self.zarezerwowano}"
+
 
 class Zamowienie(models.Model):
     STATUS_CHOICES = [
@@ -242,7 +245,6 @@ class PozycjaZamowienia(models.Model):
 
         return Decimal(szer * wys) / Decimal("1000000")
 
-
     def przelicz_cene(self):
         powierzchnia = self.powierzchnia_m2()
 
@@ -256,8 +258,7 @@ class PozycjaZamowienia(models.Model):
         if self.pk:
             for usluga in self.uslugi.all():
                 cennik = (
-                    Cennik.objects
-                    .filter(typ_uslugi=usluga)
+                    Cennik.objects.filter(typ_uslugi=usluga)
                     .order_by("-data_od")
                     .first()
                 )
@@ -267,7 +268,6 @@ class PozycjaZamowienia(models.Model):
 
         self.cena_jednostkowa = cena_materialu + cena_uslug
         self.wartosc = self.cena_jednostkowa * self.ilosc
-
 
     def przelicz_i_zapisz(self):
         self.przelicz_cene()
@@ -279,16 +279,13 @@ class PozycjaZamowienia(models.Model):
         )
         self.zamowienie.przelicz_kwote()
 
-
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-
 
     def delete(self, *args, **kwargs):
         zamowienie = self.zamowienie
         super().delete(*args, **kwargs)
         zamowienie.przelicz_kwote()
-
 
     def __str__(self):
         if self.stan_magazynowy:
@@ -390,14 +387,12 @@ class Platnosc(models.Model):
 
 class ProcesMagazynowy(models.Model):
     TYP_CHOICES = [
-    ("PRZYJECIE", "Przyjęcie materiału"),
-    ("WYDANIE", "Wydanie materiału"),
-
-    ("REZERWACJA", "Rezerwacja materiału"),
-    ("ZWOLNIENIE_REZERWACJI", "Zwolnienie rezerwacji"),
-
-    ("INWENTARYZACJA", "Inwentaryzacja"),
-    ("COFNIECIE", "Cofnięcie operacji"),
+        ("PRZYJECIE", "Przyjęcie materiału"),
+        ("WYDANIE", "Wydanie materiału"),
+        ("REZERWACJA", "Rezerwacja materiału"),
+        ("ZWOLNIENIE_REZERWACJI", "Zwolnienie rezerwacji"),
+        ("INWENTARYZACJA", "Inwentaryzacja"),
+        ("COFNIECIE", "Cofnięcie operacji"),
     ]
 
     magazyn = models.ForeignKey(Magazyn, on_delete=models.CASCADE)
@@ -417,7 +412,10 @@ class ProcesMagazynowy(models.Model):
         related_name="procesy_magazynowe",
     )
 
-    typ = models.CharField(max_length=40,choices=TYP_CHOICES,)
+    typ = models.CharField(
+        max_length=40,
+        choices=TYP_CHOICES,
+    )
     ilosc = models.IntegerField()
     data = models.DateTimeField(auto_now_add=True)
     opis = models.TextField(blank=True)

@@ -1,43 +1,43 @@
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.models import User
-from django.utils import timezone
-from django.db import transaction
 import json
 
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from django.db import transaction
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+
 from .forms import (
+    CofniecieOperacjiForm,
+    InwentaryzacjaForm,
     KlientForm,
+    MagazynForm,
     MaterialForm,
+    PlatnoscForm,
+    PozycjaZamowieniaForm,
+    PozycjaZamowieniaFormSet,
+    PracownikCreateForm,
+    PracownikEditForm,
+    ProcesMagazynowyForm,
+    RabatForm,
     RozmiarBlachyForm,
     TypUslugiForm,
     ZamowienieForm,
-    PozycjaZamowieniaForm,
-    ProcesMagazynowyForm,
-    PlatnoscForm,
-    PracownikCreateForm,
-    PracownikEditForm,
-    PozycjaZamowieniaFormSet,
-    RabatForm,
-    MagazynForm,
-    InwentaryzacjaForm,
-    CofniecieOperacjiForm,
 )
-
 from .models import (
-    Klient,
-    Material,
-    RozmiarBlachy,
-    TypUslugi,
-    Zamowienie,
-    PozycjaZamowienia,
-    Magazyn,
-    StanMagazynowy,
-    ProcesMagazynowy,
-    Platnosc,
-    PracownikProfil,
     Cennik,
+    Klient,
+    Magazyn,
+    Material,
+    Platnosc,
+    PozycjaZamowienia,
+    PracownikProfil,
+    ProcesMagazynowy,
+    RozmiarBlachy,
+    StanMagazynowy,
+    TypUslugi,
     Zadanie,
+    Zamowienie,
 )
 
 
@@ -49,11 +49,15 @@ def aktualizuj_platnosc_zamowienia(zamowienie):
         defaults={
             "kwota": zamowienie.kwota_koncowa,
             "rabat": zamowienie.rabat_wartosc,
-            "status": "NIEOPLACONA",
         },
     )
 
+    if created:
+        platnosc.status = "NIEOPLACONA"
+        platnosc.save(update_fields=["status"])
+
     return platnosc
+
 
 @login_required
 def index(request):
@@ -67,14 +71,11 @@ def klienci_lista(request):
     klienci = Klient.objects.all().order_by("-id")
 
     if query:
-        klienci = klienci.filter(
-            imie__icontains=query
-        ) | klienci.filter(
-            nazwisko__icontains=query
-        ) | klienci.filter(
-            email__icontains=query
-        ) | klienci.filter(
-            nazwa_firmy__icontains=query
+        klienci = (
+            klienci.filter(imie__icontains=query)
+            | klienci.filter(nazwisko__icontains=query)
+            | klienci.filter(email__icontains=query)
+            | klienci.filter(nazwa_firmy__icontains=query)
         )
 
     return render(
@@ -149,6 +150,8 @@ def klient_usun(request, klient_id):
             "klient": klient,
         },
     )
+
+
 @login_required
 def materialy_lista(request):
 
@@ -157,9 +160,7 @@ def materialy_lista(request):
     materialy = Material.objects.all().order_by("nazwa")
 
     if query:
-        materialy = materialy.filter(
-            nazwa__icontains=query
-        )
+        materialy = materialy.filter(nazwa__icontains=query)
 
     return render(
         request,
@@ -180,10 +181,7 @@ def material_dodaj(request):
         if form.is_valid():
             form.save()
 
-            messages.success(
-                request,
-                "Materiał został dodany."
-            )
+            messages.success(request, "Materiał został dodany.")
 
             return redirect("core:edycja_uslug")
 
@@ -217,17 +215,12 @@ def material_edytuj(request, material_id):
         if form.is_valid():
             form.save()
 
-            messages.success(
-                request,
-                "Materiał został zaktualizowany."
-            )
+            messages.success(request, "Materiał został zaktualizowany.")
 
             return redirect("core:edycja_uslug")
 
     else:
-        form = MaterialForm(
-            instance=material
-        )
+        form = MaterialForm(instance=material)
 
     return render(
         request,
@@ -251,10 +244,7 @@ def material_usun(request, material_id):
 
         material.delete()
 
-        messages.success(
-            request,
-            "Materiał został usunięty."
-        )
+        messages.success(request, "Materiał został usunięty.")
 
         return redirect("core:edycja_uslug")
 
@@ -265,15 +255,16 @@ def material_usun(request, material_id):
             "material": material,
         },
     )
+
+
 @login_required
 def rozmiary_lista(request):
     query = request.GET.get("q", "")
 
     rozmiary = RozmiarBlachy.objects.all().order_by(
-    "szerokosc_mm",
-    "wysokosc_mm",
+        "szerokosc_mm",
+        "wysokosc_mm",
     )
-
 
     return render(
         request,
@@ -330,6 +321,7 @@ def rozmiar_edytuj(request, rozmiar_id):
         },
     )
 
+
 @login_required
 def rozmiar_usun(request, rozmiar_id):
     rozmiar = get_object_or_404(RozmiarBlachy, id=rozmiar_id)
@@ -346,6 +338,8 @@ def rozmiar_usun(request, rozmiar_id):
             "rozmiar": rozmiar,
         },
     )
+
+
 @login_required
 def typy_uslug_lista(request):
     query = request.GET.get("q", "")
@@ -355,9 +349,7 @@ def typy_uslug_lista(request):
     ceny_uslug = {}
     for typ in typy_uslug:
         ostatnia_cena = (
-            Cennik.objects.filter(typ_uslugi=typ)
-            .order_by("-data_od")
-            .first()
+            Cennik.objects.filter(typ_uslugi=typ).order_by("-data_od").first()
         )
         ceny_uslug[typ.id] = ostatnia_cena.cena if ostatnia_cena else None
 
@@ -460,24 +452,24 @@ def typ_uslugi_usun(request, typ_id):
         },
     )
 
+
 @login_required
 def zamowienia_lista(request):
     query = request.GET.get("q", "")
     status = request.GET.get("status", "")
 
-    zamowienia = Zamowienie.objects.select_related("klient").exclude(
-        status="ROBOCZE"
-    ).order_by("-data_utworzenia")
+    zamowienia = (
+        Zamowienie.objects.select_related("klient")
+        .exclude(status="ROBOCZE")
+        .order_by("-data_utworzenia")
+    )
 
     if query:
-        zamowienia = zamowienia.filter(
-            klient__imie__icontains=query
-        ) | zamowienia.filter(
-            klient__nazwisko__icontains=query
-        ) | zamowienia.filter(
-            klient__email__icontains=query
-        ) | zamowienia.filter(
-            klient__nazwa_firmy__icontains=query
+        zamowienia = (
+            zamowienia.filter(klient__imie__icontains=query)
+            | zamowienia.filter(klient__nazwisko__icontains=query)
+            | zamowienia.filter(klient__email__icontains=query)
+            | zamowienia.filter(klient__nazwa_firmy__icontains=query)
         )
 
     if status:
@@ -498,9 +490,11 @@ def zamowienia_lista(request):
 @login_required
 def zamowienie_dodaj(request):
     stany_magazynowe = (
-        StanMagazynowy.objects
-        .select_related("magazyn", "material", "rozmiar")
-        .filter(ilosc__gt=0)
+        StanMagazynowy.objects.select_related("magazyn", "material", "rozmiar")
+        .filter(
+            ilosc__gt=0,
+            rozmiar__isnull=False,
+        )
         .order_by(
             "magazyn__nazwa",
             "material__nazwa",
@@ -512,37 +506,45 @@ def zamowienie_dodaj(request):
 
     typy_uslug = TypUslugi.objects.all().order_by("nazwa")
 
-    stany_json = json.dumps([
-        {
-            "id": stan.id,
-            "magazyn": stan.magazyn.nazwa,
-            "material": str(stan.material),
-            "material_id": stan.material.id,
-            "rozmiar": str(stan.rozmiar) if stan.rozmiar else "",
-            "szerokosc": stan.rozmiar.szerokosc_mm if stan.rozmiar else 0,
-            "wysokosc": stan.rozmiar.wysokosc_mm if stan.rozmiar else 0,
-            "cena_za_m2": float(stan.material.cena_za_m2),
-            "ilosc": stan.ilosc,
-            "zarezerwowano": stan.zarezerwowano,
-            "dostepne": stan.dostepne,
-        }
-        for stan in stany_magazynowe
-        if stan.dostepne > 0
-    ])
+    stany_json = json.dumps(
+        [
+            {
+                "id": stan.id,
+                "magazyn": stan.magazyn.nazwa,
+                "material": str(stan.material),
+                "material_id": stan.material.id,
+                "rozmiar": str(stan.rozmiar) if stan.rozmiar else "",
+                "szerokosc": stan.rozmiar.szerokosc_mm if stan.rozmiar else 0,
+                "wysokosc": stan.rozmiar.wysokosc_mm if stan.rozmiar else 0,
+                "cena_za_m2": float(stan.material.cena_za_m2),
+                "ilosc": stan.ilosc,
+                "zarezerwowano": stan.zarezerwowano,
+                "dostepne": stan.dostepne,
+            }
+            for stan in stany_magazynowe
+            if stan.dostepne > 0
+        ]
+    )
 
-    uslugi_json = json.dumps([
-        {
-            "id": typ.id,
-            "nazwa": typ.nazwa,
-            "cena": float(
-                Cennik.objects.filter(typ_uslugi=typ)
-                .order_by("-data_od")
-                .first()
-                .cena
-            ) if Cennik.objects.filter(typ_uslugi=typ).exists() else 0,
-        }
-        for typ in typy_uslug
-    ])
+    uslugi_json = json.dumps(
+        [
+            {
+                "id": typ.id,
+                "nazwa": typ.nazwa,
+                "cena": (
+                    float(
+                        Cennik.objects.filter(typ_uslugi=typ)
+                        .order_by("-data_od")
+                        .first()
+                        .cena
+                    )
+                    if Cennik.objects.filter(typ_uslugi=typ).exists()
+                    else 0
+                ),
+            }
+            for typ in typy_uslug
+        ]
+    )
 
     if request.method == "POST":
         zamowienie_form = ZamowienieForm(request.POST)
@@ -550,7 +552,8 @@ def zamowienie_dodaj(request):
 
         if zamowienie_form.is_valid() and pozycje_formset.is_valid():
             poprawne_pozycje = [
-                form for form in pozycje_formset
+                form
+                for form in pozycje_formset
                 if form.cleaned_data and not form.cleaned_data.get("DELETE")
             ]
 
@@ -574,7 +577,9 @@ def zamowienie_dodaj(request):
                 zamowienie.przelicz_kwote()
 
                 messages.success(request, "Zamówienie robocze zostało zapisane.")
-                return redirect("core:zamowienie_szczegoly", zamowienie_id=zamowienie.id)
+                return redirect(
+                    "core:zamowienie_szczegoly", zamowienie_id=zamowienie.id
+                )
 
     else:
         zamowienie_form = ZamowienieForm()
@@ -633,6 +638,8 @@ def zamowienie_usun(request, zamowienie_id):
             "zamowienie": zamowienie,
         },
     )
+
+
 @login_required
 def zamowienie_szczegoly(request, zamowienie_id):
     zamowienie = get_object_or_404(
@@ -641,8 +648,7 @@ def zamowienie_szczegoly(request, zamowienie_id):
     )
 
     pozycje = (
-        zamowienie.pozycje
-        .select_related(
+        zamowienie.pozycje.select_related(
             "stan_magazynowy",
             "stan_magazynowy__magazyn",
             "stan_magazynowy__material",
@@ -664,6 +670,7 @@ def zamowienie_szczegoly(request, zamowienie_id):
             "rabat_form": RabatForm(instance=zamowienie),
         },
     )
+
 
 @login_required
 def zamowienie_ustaw_rabat(request, zamowienie_id):
@@ -697,7 +704,9 @@ def zamowienie_przyjmij(request, zamowienie_id):
         return redirect("core:zamowienie_szczegoly", zamowienie_id=zamowienie.id)
 
     if zamowienie.status != "ROBOCZE":
-        messages.error(request, "To zamówienie zostało już przyjęte albo nie jest robocze.")
+        messages.error(
+            request, "To zamówienie zostało już przyjęte albo nie jest robocze."
+        )
         return redirect("core:zamowienie_szczegoly", zamowienie_id=zamowienie.id)
 
     if not zamowienie.pozycje.exists():
@@ -706,17 +715,24 @@ def zamowienie_przyjmij(request, zamowienie_id):
 
     try:
         with transaction.atomic():
-            for pozycja in zamowienie.pozycje.select_related(
-                "stan_magazynowy",
-                "stan_magazynowy__material",
-                "stan_magazynowy__rozmiar",
-                "stan_magazynowy__magazyn",
-            ).prefetch_related("uslugi").all():
+            for pozycja in (
+                zamowienie.pozycje.select_related(
+                    "stan_magazynowy",
+                    "stan_magazynowy__material",
+                    "stan_magazynowy__rozmiar",
+                    "stan_magazynowy__magazyn",
+                )
+                .prefetch_related("uslugi")
+                .all()
+            ):
 
                 stan = pozycja.stan_magazynowy
 
                 if not stan:
-                    messages.error(request, "Jedna z pozycji nie ma wybranego arkusza magazynowego.")
+                    messages.error(
+                        request,
+                        "Jedna z pozycji nie ma wybranego arkusza magazynowego.",
+                    )
                     raise ValueError("Brak arkusza")
 
                 stan = StanMagazynowy.objects.select_for_update().get(id=stan.id)
@@ -725,7 +741,7 @@ def zamowienie_przyjmij(request, zamowienie_id):
                     messages.error(
                         request,
                         f"Brak wystarczającej ilości: {stan}. "
-                        f"Potrzeba {pozycja.ilosc}, dostępne {stan.dostepne}."
+                        f"Potrzeba {pozycja.ilosc}, dostępne {stan.dostepne}.",
                     )
                     raise ValueError("Brak materiału")
 
@@ -773,10 +789,70 @@ def zamowienie_przyjmij(request, zamowienie_id):
 
     messages.success(
         request,
-        "Zamówienie zostało przyjęte, materiały zostały zarezerwowane, utworzono zadania i płatność."
+        "Zamówienie zostało przyjęte, materiały zostały zarezerwowane, utworzono zadania i płatność.",
     )
     return redirect("core:zamowienia_lista")
-    
+
+
+@login_required
+def zamowienie_zakoncz(request, zamowienie_id):
+    zamowienie = get_object_or_404(
+        Zamowienie.objects.prefetch_related(
+            "pozycje__stan_magazynowy",
+            "pozycje__stan_magazynowy__magazyn",
+            "pozycje__stan_magazynowy__material",
+            "pozycje__stan_magazynowy__rozmiar",
+        ),
+        id=zamowienie_id,
+    )
+
+    if request.method != "POST":
+        return redirect("core:zamowienie_szczegoly", zamowienie_id=zamowienie.id)
+
+    if zamowienie.status != "WYKONANE":
+        messages.error(request, "Zakończyć można tylko zamówienie wykonane.")
+        return redirect("core:zamowienie_szczegoly", zamowienie_id=zamowienie.id)
+
+    with transaction.atomic():
+        for pozycja in zamowienie.pozycje.select_related(
+            "stan_magazynowy",
+            "stan_magazynowy__magazyn",
+            "stan_magazynowy__material",
+            "stan_magazynowy__rozmiar",
+        ):
+            stan = pozycja.stan_magazynowy
+
+            if not stan:
+                continue
+
+            stan = StanMagazynowy.objects.select_for_update().get(id=stan.id)
+
+            ilosc = pozycja.ilosc
+
+            stan.zarezerwowano = max(0, stan.zarezerwowano - ilosc)
+            stan.ilosc = max(0, stan.ilosc - ilosc)
+
+            stan.save(update_fields=["ilosc", "zarezerwowano"])
+
+            ProcesMagazynowy.objects.create(
+                magazyn=stan.magazyn,
+                material=stan.material,
+                rozmiar=stan.rozmiar,
+                pracownik=request.user,
+                typ="WYDANIE",
+                ilosc=ilosc,
+                opis=f"Wydanie do zamówienia {zamowienie.numer or zamowienie.id}",
+            )
+
+        zamowienie.status = "ZAKONCZONE"
+        zamowienie.save(update_fields=["status"])
+
+    messages.success(
+        request, "Zamówienie zostało zakończone, a rezerwacja zdjęta z magazynu."
+    )
+    return redirect("core:zamowienia_lista")
+
+
 @login_required
 def pozycja_dodaj(request, zamowienie_id):
     zamowienie = get_object_or_404(Zamowienie, id=zamowienie_id)
@@ -861,7 +937,8 @@ def pozycja_usun(request, pozycja_id):
             "zamowienie": zamowienie,
         },
     )
-    
+
+
 @login_required
 def moje_prace(request):
     try:
@@ -871,7 +948,9 @@ def moje_prace(request):
         if request.user.is_superuser:
             rola = "ADMIN"
         else:
-            messages.error(request, "Twoje konto nie ma przypisanego profilu pracownika.")
+            messages.error(
+                request, "Twoje konto nie ma przypisanego profilu pracownika."
+            )
             return render(
                 request,
                 "moje_prace/lista.html",
@@ -906,6 +985,7 @@ def moje_prace(request):
         },
     )
 
+
 @login_required
 def zadanie_status(request, zadanie_id, status):
     zadanie = get_object_or_404(Zadanie, id=zadanie_id)
@@ -923,16 +1003,20 @@ def zadanie_status(request, zadanie_id, status):
     zadanie.przypisany_pracownik = request.user
     zadanie.status = status
     zadanie.save()
+    zamowienie = zadanie.pozycja.zamowienie
 
+    if status == "W_REALIZACJI" and zamowienie.status == "ZATWIERDZONE":
+        zamowienie.status = "W_REALIZACJI"
+        zamowienie.save(update_fields=["status"])
     messages.success(request, "Status zadania został zaktualizowany.")
 
     return redirect("core:moje_prace")
 
+
 @login_required
 def magazyn_lista(request):
     stany = (
-        StanMagazynowy.objects
-        .select_related(
+        StanMagazynowy.objects.select_related(
             "magazyn",
             "material",
             "rozmiar",
@@ -1011,7 +1095,8 @@ def proces_magazynowy_dodaj(request):
             "tytul": "Wykonaj czynność na magazynie",
         },
     )
-    
+
+
 @login_required
 def magazyn_dodaj(request):
 
@@ -1041,23 +1126,6 @@ def magazyn_dodaj(request):
         },
     )
 
-@login_required
-def historia_magazynu(request):
-    procesy = ProcesMagazynowy.objects.select_related(
-        "magazyn",
-        "material",
-        "pracownik",
-        "cofnieta_przez",
-    ).order_by("-data")
-
-    return render(
-        request,
-        "magazyn/historia.html",
-        {
-            "procesy": procesy,
-        },
-    )
-
 
 @login_required
 def inwentaryzacja_magazynu(request, stan_id):
@@ -1070,7 +1138,6 @@ def inwentaryzacja_magazynu(request, stan_id):
         form = InwentaryzacjaForm(request.POST)
 
         if form.is_valid():
-
             nowa_ilosc = form.cleaned_data["nowa_ilosc"]
 
             stan.ilosc = nowa_ilosc
@@ -1079,6 +1146,7 @@ def inwentaryzacja_magazynu(request, stan_id):
             ProcesMagazynowy.objects.create(
                 magazyn=stan.magazyn,
                 material=stan.material,
+                rozmiar=stan.rozmiar,
                 pracownik=request.user,
                 typ="INWENTARYZACJA",
                 ilosc=nowa_ilosc,
@@ -1110,80 +1178,6 @@ def inwentaryzacja_magazynu(request, stan_id):
 
 
 @login_required
-def cofnij_operacje_magazynowa(request, proces_id):
-    proces = get_object_or_404(
-        ProcesMagazynowy.objects.select_related("magazyn", "material"),
-        id=proces_id,
-    )
-
-    if proces.cofnieta:
-        messages.error(request, "Ta operacja została już cofnięta.")
-        return redirect("core:historia_magazynu")
-
-    if proces.typ == "COFNIECIE":
-        messages.error(request, "Nie można cofnąć operacji cofnięcia.")
-        return redirect("core:historia_magazynu")
-
-    if request.method == "POST":
-        form = CofniecieOperacjiForm(request.POST)
-
-        if form.is_valid():
-            stan, created = StanMagazynowy.objects.get_or_create(
-                magazyn=proces.magazyn,
-                material=proces.material,
-                defaults={"ilosc": 0, "zarezerwowano": 0},
-            )
-
-            if proces.typ == "PRZYJECIE":
-                if stan.ilosc < proces.ilosc:
-                    messages.error(
-                        request,
-                        "Nie można cofnąć przyjęcia, bo stan magazynowy jest za niski.",
-                    )
-                    return redirect("core:historia_magazynu")
-
-                stan.ilosc -= proces.ilosc
-
-            elif proces.typ == "WYDANIE":
-                stan.ilosc += proces.ilosc
-
-            elif proces.typ == "INWENTARYZACJA":
-                stan.ilosc -= proces.ilosc
-
-            stan.save()
-
-            proces.cofnieta = True
-            proces.powod_cofniecia = form.cleaned_data["powod"]
-            proces.cofnieta_przez = request.user
-            proces.data_cofniecia = timezone.now()
-            proces.save()
-
-            ProcesMagazynowy.objects.create(
-                magazyn=proces.magazyn,
-                material=proces.material,
-                pracownik=request.user,
-                typ="COFNIECIE",
-                ilosc=proces.ilosc,
-                opis=form.cleaned_data["powod"],
-                operacja_powiazana=proces,
-            )
-
-            messages.success(request, "Operacja została cofnięta.")
-            return redirect("core:historia_magazynu")
-    else:
-        form = CofniecieOperacjiForm()
-
-    return render(
-        request,
-        "magazyn/cofnij.html",
-        {
-            "form": form,
-            "proces": proces,
-        },
-    )
-
-
-@login_required
 def historia_magazynu(request):
     procesy = ProcesMagazynowy.objects.select_related(
         "magazyn",
@@ -1201,7 +1195,6 @@ def historia_magazynu(request):
     )
 
 
-
 @login_required
 def cofnij_operacje_magazynowa(request, proces_id):
     proces = get_object_or_404(
@@ -1224,6 +1217,7 @@ def cofnij_operacje_magazynowa(request, proces_id):
             stan, created = StanMagazynowy.objects.get_or_create(
                 magazyn=proces.magazyn,
                 material=proces.material,
+                rozmiar=proces.rozmiar,
                 defaults={"ilosc": 0, "zarezerwowano": 0},
             )
 
@@ -1254,6 +1248,7 @@ def cofnij_operacje_magazynowa(request, proces_id):
             ProcesMagazynowy.objects.create(
                 magazyn=proces.magazyn,
                 material=proces.material,
+                rozmiar=proces.rozmiar,
                 pracownik=request.user,
                 typ="COFNIECIE",
                 ilosc=proces.ilosc,
@@ -1274,7 +1269,8 @@ def cofnij_operacje_magazynowa(request, proces_id):
             "proces": proces,
         },
     )
- 
+
+
 @login_required
 def magazyn_edytuj(request, magazyn_id):
 
@@ -1311,7 +1307,8 @@ def magazyn_edytuj(request, magazyn_id):
             "tytul": "Edytuj magazyn",
         },
     )
- 
+
+
 @login_required
 def platnosci_lista(request):
     status = request.GET.get("status", "")
@@ -1334,6 +1331,7 @@ def platnosci_lista(request):
         },
     )
 
+
 @login_required
 def platnosc_oznacz_oplacona(request, platnosc_id):
     platnosc = get_object_or_404(Platnosc, id=platnosc_id)
@@ -1346,6 +1344,7 @@ def platnosc_oznacz_oplacona(request, platnosc_id):
 
     return redirect("core:platnosci_lista")
 
+
 @login_required
 def platnosc_anuluj_status(request, platnosc_id):
     platnosc = get_object_or_404(Platnosc, id=platnosc_id)
@@ -1357,6 +1356,7 @@ def platnosc_anuluj_status(request, platnosc_id):
         messages.success(request, "Płatność została anulowana.")
 
     return redirect("core:platnosci_lista")
+
 
 @login_required
 def platnosc_dodaj(request):
@@ -1420,21 +1420,22 @@ def platnosc_usun(request, platnosc_id):
             "platnosc": platnosc,
         },
     )
+
+
 @login_required
 def pracownicy_lista(request):
     query = request.GET.get("q", "")
 
-    pracownicy = PracownikProfil.objects.select_related("user").order_by("user__last_name")
+    pracownicy = PracownikProfil.objects.select_related("user").order_by(
+        "user__last_name"
+    )
 
     if query:
-        pracownicy = pracownicy.filter(
-            user__first_name__icontains=query
-        ) | pracownicy.filter(
-            user__last_name__icontains=query
-        ) | pracownicy.filter(
-            user__username__icontains=query
-        ) | pracownicy.filter(
-            user__email__icontains=query
+        pracownicy = (
+            pracownicy.filter(user__first_name__icontains=query)
+            | pracownicy.filter(user__last_name__icontains=query)
+            | pracownicy.filter(user__username__icontains=query)
+            | pracownicy.filter(user__email__icontains=query)
         )
 
     return render(
@@ -1471,7 +1472,9 @@ def pracownik_dodaj(request):
                 rola=form.cleaned_data["rola"],
             )
 
-            messages.success(request, "Pracownik i konto użytkownika zostały utworzone.")
+            messages.success(
+                request, "Pracownik i konto użytkownika zostały utworzone."
+            )
             return redirect("core:pracownicy_lista")
     else:
         form = PracownikCreateForm()
@@ -1530,6 +1533,7 @@ def pracownik_edytuj(request, pracownik_id):
         },
     )
 
+
 @login_required
 def pracownik_aktywuj(request, pracownik_id):
     profil = get_object_or_404(PracownikProfil, id=pracownik_id)
@@ -1542,7 +1546,8 @@ def pracownik_aktywuj(request, pracownik_id):
         return redirect("core:pracownicy_lista")
 
     return redirect("core:pracownicy_lista")
-    
+
+
 @login_required
 def pracownik_dezaktywuj(request, pracownik_id):
     profil = get_object_or_404(PracownikProfil, id=pracownik_id)
@@ -1556,6 +1561,7 @@ def pracownik_dezaktywuj(request, pracownik_id):
 
     return redirect("core:pracownicy_lista")
 
+
 @login_required
 def edycja_uslug(request):
     materialy = Material.objects.all().order_by("nazwa")
@@ -1566,15 +1572,15 @@ def edycja_uslug(request):
 
     for usluga in typy_uslug:
         ostatnia_cena = (
-            Cennik.objects.filter(typ_uslugi=usluga)
-            .order_by("-data_od")
-            .first()
+            Cennik.objects.filter(typ_uslugi=usluga).order_by("-data_od").first()
         )
 
-        uslugi_z_cenami.append({
-            "usluga": usluga,
-            "cena": ostatnia_cena.cena if ostatnia_cena else None,
-        })
+        uslugi_z_cenami.append(
+            {
+                "usluga": usluga,
+                "cena": ostatnia_cena.cena if ostatnia_cena else None,
+            }
+        )
 
     return render(
         request,

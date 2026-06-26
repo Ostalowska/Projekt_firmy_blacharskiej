@@ -1,18 +1,18 @@
-from django.core.management.base import BaseCommand
+from datetime import date
+
 from django.contrib.auth.models import User
+from django.core.management.base import BaseCommand
 
 from core.models import (
-    Klient,
-    PracownikProfil,
-    Material,
-    RozmiarBlachy,
-    TypUslugi,
     Cennik,
+    Klient,
     Magazyn,
+    Material,
+    PracownikProfil,
+    RozmiarBlachy,
     StanMagazynowy,
+    TypUslugi,
 )
-
-from datetime import date
 
 
 class Command(BaseCommand):
@@ -231,6 +231,4 @@ class Command(BaseCommand):
                 },
             )
 
-        self.stdout.write(
-            self.style.SUCCESS("Dane demo zostały utworzone.")
-        )
+        self.stdout.write(self.style.SUCCESS("Dane demo zostały utworzone."))

@@ -24,9 +24,24 @@
     .uslugi-box ul { list-style: none; padding: 0; margin: 0; }
     .uslugi-box li { margin-bottom: 6px; }
     .uslugi-box input { width: auto; }
+	.checkbox-row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		background: #eef2f7;
+		padding: 10px;
+		border-radius: 6px;
+		border: 1px solid #d0d7de;
+	}
+
+	.checkbox-row input {
+		width: auto;
+		transform: scale(1.2);
+	}
 
     @media (max-width: 800px) {
         .form-grid { grid-template-columns: 1fr; }
+	
     }
 </style>
 
@@ -86,12 +101,12 @@
                             </div>
 
                             <div class="form-row full">
-                                <label>
-                                    {{ form.czy_niestandardowy }}
-                                    {{ form.czy_niestandardowy.label }}
-                                </label>
-                                {{ form.czy_niestandardowy.errors }}
-                            </div>
+								<label class="checkbox-row">
+									{{ form.czy_niestandardowy }}
+									<span>{{ form.czy_niestandardowy.label }}</span>
+								</label>
+								{{ form.czy_niestandardowy.errors }}
+							</div>
 
                             <div class="form-grid full pola-niestandardowe hidden">
                                 <div class="form-row">
@@ -172,11 +187,11 @@
             </div>
 
             <div class="form-row full">
-                <label>
-                    {{ pozycje_formset.empty_form.czy_niestandardowy }}
-                    Rozmiar niestandardowy
-                </label>
-            </div>
+				<label class="checkbox-row">
+					{{ pozycje_formset.empty_form.czy_niestandardowy }}
+					<span>Rozmiar niestandardowy</span>
+				</label>
+			</div>
 
             <div class="form-grid full pola-niestandardowe hidden">
                 <div class="form-row">
